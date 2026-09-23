@@ -1,0 +1,782 @@
+{
+  "base": "http://localhost:3003",
+  "api": "http://localhost:8083",
+  "checks": [
+    {
+      "name": "reference draft restored with five choices"
+    },
+    {
+      "name": "Оценить решения HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "evaluate ru-RU score/spent",
+      "score": 56.54,
+      "spent": 95
+    },
+    {
+      "name": "evaluate ru-RU language",
+      "actual": "ru-RU",
+      "header": "ru-RU"
+    },
+    {
+      "name": "evaluate ru-RU actual response language header"
+    },
+    {
+      "name": "evaluate ru-RU mock"
+    },
+    {
+      "name": "first result lists chosen measures"
+    },
+    {
+      "name": "Найти альтернативы HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "alternatives goal follows selected radio",
+      "goal": "score"
+    },
+    {
+      "name": "alternatives ru-RU actual language"
+    },
+    {
+      "name": "alternatives ru-RU reference unchanged"
+    },
+    {
+      "name": "alternatives ru-RU best score",
+      "score": 57.21,
+      "spent": 100
+    },
+    {
+      "name": "alternatives ru-RU full selected plan"
+    },
+    {
+      "name": "alternatives ru-RU three goals"
+    },
+    {
+      "name": "alternatives ru-RU equity shares score plan"
+    },
+    {
+      "name": "alternatives ru-RU economy 80",
+      "spent": 80
+    },
+    {
+      "name": "alternatives ru-RU template recommendation"
+    },
+    {
+      "name": "three strategy cards visible"
+    },
+    {
+      "name": "goal equity switch does not automatically POST"
+    },
+    {
+      "name": "Найти альтернативы HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "alternatives goal follows selected radio",
+      "goal": "equity"
+    },
+    {
+      "name": "alternatives ru-RU actual language"
+    },
+    {
+      "name": "alternatives ru-RU reference unchanged"
+    },
+    {
+      "name": "alternatives ru-RU best score",
+      "score": 57.21,
+      "spent": 100
+    },
+    {
+      "name": "alternatives ru-RU full selected plan"
+    },
+    {
+      "name": "alternatives ru-RU three goals"
+    },
+    {
+      "name": "alternatives ru-RU equity shares score plan"
+    },
+    {
+      "name": "alternatives ru-RU economy 80",
+      "spent": 80
+    },
+    {
+      "name": "alternatives ru-RU template recommendation"
+    },
+    {
+      "name": "goal equity recommendation chooses its best plan"
+    },
+    {
+      "name": "goal economy switch does not automatically POST"
+    },
+    {
+      "name": "Найти альтернативы HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "alternatives goal follows selected radio",
+      "goal": "economy"
+    },
+    {
+      "name": "alternatives ru-RU actual language"
+    },
+    {
+      "name": "alternatives ru-RU reference unchanged"
+    },
+    {
+      "name": "alternatives ru-RU best score",
+      "score": 57.21,
+      "spent": 100
+    },
+    {
+      "name": "alternatives ru-RU full selected plan"
+    },
+    {
+      "name": "alternatives ru-RU three goals"
+    },
+    {
+      "name": "alternatives ru-RU equity shares score plan"
+    },
+    {
+      "name": "alternatives ru-RU economy 80",
+      "spent": 80
+    },
+    {
+      "name": "alternatives ru-RU template recommendation"
+    },
+    {
+      "name": "goal economy recommendation chooses its best plan"
+    },
+    {
+      "name": "locale en does not automatically POST"
+    },
+    {
+      "name": "Re-evaluate in English HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "evaluate en-US score/spent",
+      "score": 56.54,
+      "spent": 95
+    },
+    {
+      "name": "evaluate en-US language",
+      "actual": "en-US",
+      "header": "en-US"
+    },
+    {
+      "name": "evaluate en-US actual response language header"
+    },
+    {
+      "name": "evaluate en-US mock"
+    },
+    {
+      "name": "Find alternatives HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "alternatives goal follows selected radio",
+      "goal": "score"
+    },
+    {
+      "name": "alternatives en-US actual language"
+    },
+    {
+      "name": "alternatives en-US reference unchanged"
+    },
+    {
+      "name": "alternatives en-US best score",
+      "score": 57.21,
+      "spent": 100
+    },
+    {
+      "name": "alternatives en-US full selected plan"
+    },
+    {
+      "name": "alternatives en-US three goals"
+    },
+    {
+      "name": "alternatives en-US equity shares score plan"
+    },
+    {
+      "name": "alternatives en-US economy 80",
+      "spent": 80
+    },
+    {
+      "name": "alternatives en-US template recommendation"
+    },
+    {
+      "name": "locale re-evaluation did not add history"
+    },
+    {
+      "name": "locale kk does not automatically POST"
+    },
+    {
+      "name": "Қазақ тілінде қайта бағалау HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "evaluate kk-KZ score/spent",
+      "score": 56.54,
+      "spent": 95
+    },
+    {
+      "name": "evaluate kk-KZ language",
+      "actual": "kk-KZ",
+      "header": "kk-KZ"
+    },
+    {
+      "name": "evaluate kk-KZ actual response language header"
+    },
+    {
+      "name": "evaluate kk-KZ mock"
+    },
+    {
+      "name": "Баламаларды табу HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "alternatives goal follows selected radio",
+      "goal": "score"
+    },
+    {
+      "name": "alternatives kk-KZ actual language"
+    },
+    {
+      "name": "alternatives kk-KZ reference unchanged"
+    },
+    {
+      "name": "alternatives kk-KZ best score",
+      "score": 57.21,
+      "spent": 100
+    },
+    {
+      "name": "alternatives kk-KZ full selected plan"
+    },
+    {
+      "name": "alternatives kk-KZ three goals"
+    },
+    {
+      "name": "alternatives kk-KZ equity shares score plan"
+    },
+    {
+      "name": "alternatives kk-KZ economy 80",
+      "spent": 80
+    },
+    {
+      "name": "alternatives kk-KZ template recommendation"
+    },
+    {
+      "name": "390 Kazakh alternatives no horizontal overflow",
+      "scroll": 390,
+      "width": 390,
+      "body": 390
+    },
+    {
+      "name": "alternative network failure kept result"
+    },
+    {
+      "name": "Сұрауды қайталау HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "alternatives goal follows selected radio",
+      "goal": "score"
+    },
+    {
+      "name": "alternatives kk-KZ actual language"
+    },
+    {
+      "name": "alternatives kk-KZ reference unchanged"
+    },
+    {
+      "name": "alternatives kk-KZ best score",
+      "score": 57.21,
+      "spent": 100
+    },
+    {
+      "name": "alternatives kk-KZ full selected plan"
+    },
+    {
+      "name": "alternatives kk-KZ three goals"
+    },
+    {
+      "name": "alternatives kk-KZ equity shares score plan"
+    },
+    {
+      "name": "alternatives kk-KZ economy 80",
+      "spent": 80
+    },
+    {
+      "name": "alternatives kk-KZ template recommendation"
+    },
+    {
+      "name": "Apply navigates without evaluating"
+    },
+    {
+      "name": "Apply persists full winning plan"
+    },
+    {
+      "name": "Apply explicit next action explained"
+    },
+    {
+      "name": "Шешімдерді бағалау HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "evaluate kk-KZ score/spent",
+      "score": 57.21,
+      "spent": 100
+    },
+    {
+      "name": "evaluate kk-KZ language",
+      "actual": "kk-KZ",
+      "header": "kk-KZ"
+    },
+    {
+      "name": "evaluate kk-KZ actual response language header"
+    },
+    {
+      "name": "evaluate kk-KZ mock"
+    },
+    {
+      "name": "comparison 56.54 to 57.21 delta +.67",
+      "text": "Score\t56,54\t57,21\t+0,67"
+    },
+    {
+      "name": "comparison has five district rows"
+    },
+    {
+      "name": "locale en does not automatically POST"
+    },
+    {
+      "name": "failed reevaluation keeps comparison"
+    },
+    {
+      "name": "Try again HTTP 200",
+      "status": 200
+    },
+    {
+      "name": "evaluate en-US score/spent",
+      "score": 57.21,
+      "spent": 100
+    },
+    {
+      "name": "evaluate en-US language",
+      "actual": "en-US",
+      "header": "en-US"
+    },
+    {
+      "name": "evaluate en-US actual response language header"
+    },
+    {
+      "name": "evaluate en-US mock"
+    },
+    {
+      "name": "retry keeps two successful distinct attempts"
+    },
+    {
+      "name": "390 English results no horizontal overflow",
+      "scroll": 390,
+      "width": 390,
+      "body": 390
+    },
+    {
+      "name": "locale kk does not automatically POST"
+    },
+    {
+      "name": "390 Kazakh results no horizontal overflow",
+      "scroll": 390,
+      "width": 390,
+      "body": 390
+    },
+    {
+      "name": "390 Kazakh decisions no horizontal overflow",
+      "scroll": 390,
+      "width": 390,
+      "body": 390
+    },
+    {
+      "name": "no uncaught browser errors",
+      "browserErrors": []
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "language": "ru-RU",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M5",
+            "districtId": "saryarka"
+          }
+        ]
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/alternatives",
+      "language": "ru-RU",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M5",
+            "districtId": "saryarka"
+          }
+        ],
+        "goal": "score"
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/alternatives",
+      "language": "ru-RU",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M5",
+            "districtId": "saryarka"
+          }
+        ],
+        "goal": "equity"
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/alternatives",
+      "language": "ru-RU",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M5",
+            "districtId": "saryarka"
+          }
+        ],
+        "goal": "economy"
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "language": "en-US",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M5",
+            "districtId": "saryarka"
+          }
+        ]
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/alternatives",
+      "language": "en-US",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M5",
+            "districtId": "saryarka"
+          }
+        ],
+        "goal": "score"
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "language": "kk-KZ",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M5",
+            "districtId": "saryarka"
+          }
+        ]
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/alternatives",
+      "language": "kk-KZ",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M5",
+            "districtId": "saryarka"
+          }
+        ],
+        "goal": "score"
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/alternatives",
+      "language": "kk-KZ",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M5",
+            "districtId": "saryarka"
+          }
+        ],
+        "goal": "score"
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/alternatives",
+      "language": "kk-KZ",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M5",
+            "districtId": "saryarka"
+          }
+        ],
+        "goal": "score"
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "language": "kk-KZ",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M3",
+            "districtId": "nura"
+          }
+        ]
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "language": "en-US",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M3",
+            "districtId": "nura"
+          }
+        ]
+      }
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "language": "en-US",
+      "body": {
+        "choices": [
+          {
+            "measureId": "M7",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M8",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M10",
+            "districtId": "nura"
+          },
+          {
+            "measureId": "M12"
+          },
+          {
+            "measureId": "M3",
+            "districtId": "nura"
+          }
+        ]
+      }
+    }
+  ],
+  "browserErrors": [],
+  "failedRequests": [
+    {
+      "url": "http://localhost:8083/api/simulations/alternatives",
+      "failure": "net::ERR_FAILED"
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "failure": "net::ERR_FAILED"
+    }
+  ],
+  "failure": null,
+  "testedCommit": "88a0c8c",
+  "successfulRunRealPosts": 11,
+  "intentionalBrowserAborts": 2,
+  "pilotNote": "First pilot sent two successful mock POSTs before a test-only selector ambiguity; selector corrected, full run passed.",
+  "visualReview": "Kazakh mobile alternatives and comparison inspected; no horizontal overflow or clipped values. Long Kazakh words wrap inside cells. Element screenshot contains the sticky navigation overlay; full page screenshot also available."
+}
