@@ -14,6 +14,9 @@ public sealed record DistrictResult(
 
 public sealed record AppliedSynergy(IReadOnlyList<string> MeasureIds, string DistrictId, string IndicatorId, double Delta);
 
+/// <summary>Lag-adjusted contribution of one measure, before synergies and the final 0–100 clamp.</summary>
+public sealed record AppliedEffect(string MeasureId, string DistrictId, string IndicatorId, double Delta);
+
 public sealed record ScoreBreakdown(double AverageScore, double MinDistrictScore, int CriticalCount);
 
 public sealed record Explanation(
@@ -31,6 +34,7 @@ public sealed record EvaluateResponse(
     ScoreBreakdown BaselineBreakdown,
     IReadOnlyList<DistrictResult> Districts,
     IReadOnlyList<AppliedSynergy> AppliedSynergies,
+    IReadOnlyList<AppliedEffect> AppliedEffects,
     Explanation Explanation,
     string ExplanationSource,
     string ExplanationLocale);

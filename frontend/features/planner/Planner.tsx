@@ -76,6 +76,11 @@ export function Planner({
   const trayToggleRef = useRef<HTMLButtonElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const mobileBarRef = useRef<HTMLDivElement>(null);
+  const serverErrorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (serverError !== null) serverErrorRef.current?.focus();
+  }, [serverError]);
 
   // Нижняя панель может вырасти (крупный текст, перенос строки). Лист плана и отступ
   // страницы опираются на её фактическую высоту, а не на константу, иначе CTA уходит под панель.
@@ -214,6 +219,14 @@ export function Planner({
         </Button>
       </header>
 
+      {serverError !== null ? (
+        <div ref={serverErrorRef} tabIndex={-1} className={styles.serverError} role="alert">
+          <p className={styles.summaryTitle}>{copy.serverResponse}</p>
+          <p>{serverError}</p>
+          <p className={styles.textMuted}>{copy.planSaved}</p>
+        </div>
+      ) : null}
+
       {rules === null ? (
         <p className={styles.rulesMissing} role="status">
           <span aria-hidden="true">! </span>
@@ -308,7 +321,6 @@ export function Planner({
               validation={validation}
               potentialSynergies={potentialSynergies}
               isEvaluating={isEvaluating}
-              serverError={serverError}
               summaryRef={summaryRef}
               headingRef={trayHeadingRef}
               onRemove={(measureId) => commit(removeChoice(choices, measureId))}

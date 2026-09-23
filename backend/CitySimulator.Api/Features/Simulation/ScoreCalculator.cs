@@ -10,7 +10,8 @@ public sealed record SimulationOutcome(
     double MinDistrictScore,
     int CriticalCount,
     double Score,
-    IReadOnlyList<AppliedSynergy> AppliedSynergies);
+    IReadOnlyList<AppliedSynergy> AppliedSynergies,
+    IReadOnlyList<AppliedEffect> AppliedEffects);
 
 /// <summary>
 /// Score formula from docs/reference/district-dataset.docx, section 3. Pure and order-independent.
@@ -26,23 +27,26 @@ public static class ScoreCalculator
 
     public static SimulationOutcome Simulate(IReadOnlyList<ValidatedChoice> choices)
     {
-        // Sorting makes floating-point summation independent of the order in which decisions were sent.
+        // Keep exact decimal arithmetic until the response boundary; never round intermediate values.
         var ordered = choices
             .OrderBy(c => int.Parse(c.Measure.Id.AsSpan(1)))
             .ToList();
 
         var deltas = ScenarioData.Districts.ToDictionary(
             d => d.Id,
-            _ => ScenarioData.Indicators.ToDictionary(i => i.Id, _ => 0.0));
+            _ => ScenarioData.Indicators.ToDictionary(i => i.Id, _ => 0m));
 
+        var appliedEffects = new List<AppliedEffect>();
         foreach (var choice in ordered)
         {
-            var share = RealizedShare(choice.Measure);
+            var share = (decimal)(ScenarioData.HorizonQuarters - choice.Measure.LagQuarters) / ScenarioData.HorizonQuarters;
             foreach (var districtId in TargetDistricts(choice))
             {
                 foreach (var (indicatorId, effect) in choice.Measure.Effects)
                 {
-                    deltas[districtId][indicatorId] += effect * share;
+                    var delta = (decimal)effect * share;
+                    deltas[districtId][indicatorId] += delta;
+                    appliedEffects.Add(new AppliedEffect(choice.Measure.Id, districtId, indicatorId, (double)delta));
                 }
             }
         }
@@ -59,7 +63,7 @@ public static class ScoreCalculator
 
             foreach (var districtId in TargetDistricts(first))
             {
-                deltas[districtId][synergy.IndicatorId] += synergy.Bonus;
+                deltas[districtId][synergy.IndicatorId] += (decimal)synergy.Bonus;
                 appliedSynergies.Add(new AppliedSynergy(
                     [synergy.FirstMeasureId, synergy.SecondMeasureId], districtId, synergy.IndicatorId, synergy.Bonus));
             }
@@ -70,20 +74,23 @@ public static class ScoreCalculator
             {
                 var values = ScenarioData.Indicators.ToDictionary(
                     i => i.Id,
-                    i => Math.Clamp(d.Indicators[i.Id] + deltas[d.Id][i.Id], 0, 100));
-                var score = ScenarioData.Indicators.Sum(i => i.Weight * values[i.Id]);
-                return new DistrictState(d, values, score);
+                    i => Math.Clamp((decimal)d.Indicators[i.Id] + deltas[d.Id][i.Id], 0m, 100m));
+                var score = ScenarioData.Indicators.Sum(i => (decimal)i.Weight * values[i.Id]);
+                return new { District = d, Indicators = values, Score = score };
             })
             .ToList();
 
-        var average = states.Sum(s => s.District.PopulationShare * s.Score);
+        var average = states.Sum(s => (decimal)s.District.PopulationShare * s.Score);
         var min = states.Min(s => s.Score);
-        var critical = states.Sum(s => s.Indicators.Values.Count(v => v < ScenarioData.CriticalThreshold));
-        var total = ScenarioData.AverageWeight * average
-                    + ScenarioData.MinDistrictWeight * min
-                    - ScenarioData.CriticalPenalty * critical;
+        var critical = states.Sum(s => s.Indicators.Values.Count(v => v < (decimal)ScenarioData.CriticalThreshold));
+        var total = (decimal)ScenarioData.AverageWeight * average
+                    + (decimal)ScenarioData.MinDistrictWeight * min
+                    - (decimal)ScenarioData.CriticalPenalty * critical;
 
-        return new SimulationOutcome(states, average, min, critical, total, appliedSynergies);
+        // Preserve the existing public numeric DTOs. Conversion happens only after the full calculation.
+        var districts = states.Select(s => new DistrictState(s.District,
+            s.Indicators.ToDictionary(i => i.Key, i => (double)i.Value), (double)s.Score)).ToList();
+        return new SimulationOutcome(districts, (double)average, (double)min, critical, (double)total, appliedSynergies, appliedEffects);
     }
 
     /// <summary>
@@ -102,5 +109,5 @@ public static class ScoreCalculator
             ? ScenarioData.Districts.Select(d => d.Id)
             : [choice.District!.Id];
 
-    public static double Round(double value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
+    public static double Round(double value) => (double)Math.Round((decimal)value, 2, MidpointRounding.AwayFromZero);
 }

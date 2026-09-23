@@ -8,5 +8,5 @@
     "incremental": false,
     "verbatimModuleSyntax": false
   },
-  "include": ["tests/**/*.test.ts", "features/simulator/simulator-reducer.ts", "features/planner/selection-rules.test.ts", "features/planner/selection-rules.ts", "features/planner/labels.ts", "lib/api/errors.ts", "lib/api/payload.ts", "lib/contracts/api.generated.ts", "lib/contracts/ui.ts"]
+  "include": ["tests/**/*.test.ts", "features/simulator/simulator-reducer.ts", "features/planner/selection-rules.test.ts", "features/planner/selection-rules.ts", "features/planner/labels.ts", "lib/api/errors.ts", "lib/api/payload.ts", "lib/api/request.ts", "lib/api/adapter.ts", "lib/contracts/api.generated.ts", "lib/contracts/ui.ts"]
 }

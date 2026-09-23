@@ -6,7 +6,15 @@ public static class ScenarioEndpoints
 {
     public static IEndpointRouteBuilder MapScenarioEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/scenario", () => TypedResults.Ok(new ScenarioResponse(
+        app.MapGet("/api/scenario", () => TypedResults.Ok(BuildResponse()))
+            .WithName("GetScenario")
+            .WithTags("Scenario")
+            .WithSummary("Исходные данные: бюджет, показатели, районы, меры и правила.");
+
+        return app;
+    }
+
+    internal static ScenarioResponse BuildResponse() => new(
                 ScenarioData.Budget,
                 ScenarioData.HorizonQuarters,
                 ScenarioData.ChoicesRequired,
@@ -17,11 +25,5 @@ public static class ScenarioEndpoints
                 ScenarioData.Districts,
                 ScenarioData.Measures,
                 ScenarioData.Synergies,
-                ScenarioData.Incompatibilities)))
-            .WithName("GetScenario")
-            .WithTags("Scenario")
-            .WithSummary("Исходные данные: бюджет, показатели, районы, меры и правила.");
-
-        return app;
-    }
+                ScenarioData.Incompatibilities);
 }

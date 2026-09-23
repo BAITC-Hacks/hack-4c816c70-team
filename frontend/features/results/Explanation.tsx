@@ -1,15 +1,13 @@
+import { Button } from "@/components/ui";
 import type { EvaluationVM } from "@/lib/contracts/ui";
-import { useLocale } from "@/lib/i18n";
+import { intlLocales, useLocale } from "@/lib/i18n";
 import { resultMessages } from "./messages";
 import styles from "./results.module.css";
 
-function explanationLocaleKey(value: unknown): "ru" | "kk" | "en" | null {
-  if (typeof value !== "string") return null;
-  const key = value.split("-", 1)[0]?.toLowerCase();
-  return key === "ru" || key === "kk" || key === "en" ? key : null;
-}
+/** Native names, so the notice names the language the text is actually written in. */
+const languageNames: Record<EvaluationVM["explanationLocale"], string> = { "ru-RU": "Русский", "kk-KZ": "Қазақша", "en-US": "English" };
 
-/** Keep a malformed/stale response from crashing the result screen. */
+/** Keep malformed or stale list items from becoming React children. */
 export function explanationListItem(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
@@ -23,11 +21,17 @@ export function explanationListItem(value: unknown): string {
   return "";
 }
 
-export function Explanation({ explanation, source, explanationLocale }: { readonly explanation: EvaluationVM["explanation"]; readonly source: EvaluationVM["explanationSource"]; readonly explanationLocale: EvaluationVM["explanationLocale"] }) {
+export function Explanation({ explanation, source, explanationLocale, onReevaluate, isReevaluating = false }: {
+  readonly explanation: EvaluationVM["explanation"];
+  readonly source: EvaluationVM["explanationSource"];
+  readonly explanationLocale: EvaluationVM["explanationLocale"];
+  readonly onReevaluate?: () => void;
+  readonly isReevaluating?: boolean;
+}) {
   const { locale } = useLocale();
   const copy = resultMessages[locale];
-  const languageNames = copy.languageNames;
-  const actualLocale = explanationLocaleKey(explanationLocale);
+  // The server text stays in the language it was produced in; switching UI language never relabels it.
+  const isStale = explanationLocale !== intlLocales[locale];
   const sections = [[copy.strengths, "strengths"], [copy.risks, "risks"], [copy.recommendations, "recommendations"]] as const;
-  return <section className={styles.explanation}><h2>{copy.explanation}</h2><p className={styles.explanationSource}>{copy.source[source]}</p><p>{actualLocale === null ? copy.unknownExplanationLanguage : copy.explanationLanguage(languageNames[actualLocale])}</p><p>{explanation.summary}</p>{sections.map(([title, key]) => <div key={key}><h3>{title}</h3>{explanation[key].length > 0 ? <ul>{explanation[key].map((item, index) => <li key={`${key}-${index}`}>{explanationListItem(item)}</li>)}</ul> : <p>{copy.none}</p>}</div>)}</section>;
+  return <section className={styles.explanation}><h2>{copy.explanation}</h2><p className={styles.explanationSource}>{copy.source[source]}</p>{isStale ? <div role="status"><p>{copy.staleExplanation(languageNames[explanationLocale])}</p>{onReevaluate ? <Button onClick={onReevaluate} busy={isReevaluating}>{isReevaluating ? copy.reevaluating : copy.reevaluate}</Button> : null}</div> : null}<p lang={explanationLocale}>{explanation.summary}</p>{sections.map(([title, key]) => <div key={key}><h3>{title}</h3>{explanation[key].length > 0 ? <ul lang={explanationLocale}>{explanation[key].map((item, index) => <li key={`${key}-${index}`}>{explanationListItem(item)}</li>)}</ul> : <p>{copy.none}</p>}</div>)}</section>;
 }

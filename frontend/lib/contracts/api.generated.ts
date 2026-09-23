@@ -79,12 +79,23 @@ export interface ApiAppliedSynergyDto {
   delta: number;
 }
 
+export interface ApiAppliedEffectDto {
+  measureId: string;
+  districtId: string;
+  indicatorId: string;
+  /** Lag-adjusted contribution before synergies and final clipping. */
+  delta: number;
+}
+
 export interface ApiExplanationDto {
   summary: string;
   strengths: string[];
   risks: string[];
   recommendations: string[];
 }
+
+/** Canonical language of the explanation text; also sent back as Content-Language. */
+export type ApiExplanationLocale = "ru-RU" | "kk-KZ" | "en-US";
 
 export interface ApiEvaluationDto {
   spent: number;
@@ -93,10 +104,11 @@ export interface ApiEvaluationDto {
   score: number;
   districts: ApiDistrictResultDto[];
   appliedSynergies: ApiAppliedSynergyDto[];
+  /** Optional while older API deployments are still in use. */
+  appliedEffects?: ApiAppliedEffectDto[];
   explanation: ApiExplanationDto;
   explanationSource: "llm" | "mock";
-  /** BCP 47 tag for the language in explanation, e.g. ru-RU or kk-KZ. */
-  explanationLocale: string | null;
+  explanationLocale: ApiExplanationLocale;
 }
 
 export interface ApiErrorDto {

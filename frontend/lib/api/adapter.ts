@@ -3,6 +3,7 @@ import type {
   ApiScenarioDto,
 } from "@/lib/contracts/api.generated";
 import type {
+  AppliedEffectVM,
   AppliedSynergyVM,
   CategoryId,
   DistrictResultVM,
@@ -12,7 +13,6 @@ import type {
   IndicatorValues,
   ScenarioVM,
 } from "@/lib/contracts/ui";
-import type { Locale } from "@/lib/i18n";
 
 const indicatorIds = ["T1", "T2", "E1", "E2", "S1", "S2", "B1", "B2", "C1", "C2"] as const;
 const categories = ["transport", "ecology", "social", "safety", "services"] as const;
@@ -51,15 +51,6 @@ function expectNumber(value: unknown, path: string): number {
 function expectBoolean(value: unknown, path: string): boolean {
   if (typeof value !== "boolean") throw new ApiContractError(`Некорректный ответ API: ${path} должен быть булевым значением.`);
   return value;
-}
-
-/** Converts a server BCP 47 tag (ru-RU, kk-KZ, en-US) to the UI locale code. */
-export function parseApiLocale(value: unknown, path: string): Locale | null {
-  if (value === null || value === undefined || value === "") return null;
-  if (typeof value !== "string") throw new ApiContractError(`Некорректный ответ API: ${path} должен быть языковым тегом.`);
-  const locale = value.split("-", 1)[0]?.toLowerCase();
-  if (locale === "ru" || locale === "kk" || locale === "en") return locale;
-  throw new ApiContractError(`Некорректный ответ API: неподдерживаемый язык ${value} в ${path}.`);
 }
 
 function expectIndicatorId(value: unknown, path: string): IndicatorId {
@@ -140,22 +131,27 @@ export function parseEvaluationDto(value: unknown): ApiEvaluationDto {
     return { measureIds: [expectString(ids[0], `appliedSynergies[${index}].measureIds[0]`), expectString(ids[1], `appliedSynergies[${index}].measureIds[1]`)] as [string, string], districtId: expectString(dto.districtId, `appliedSynergies[${index}].districtId`), indicatorId: expectIndicatorId(dto.indicatorId, `appliedSynergies[${index}].indicatorId`), delta: expectNumber(dto.delta, `appliedSynergies[${index}].delta`) };
   });
   const explanation = expectRecord(root.explanation, "explanation");
+  const appliedEffects = root.appliedEffects === undefined ? undefined : expectArray(root.appliedEffects, "appliedEffects").map((item, index) => {
+    const path = `appliedEffects[${index}]`;
+    const dto = expectRecord(item, path);
+    return { measureId: expectString(dto.measureId, `${path}.measureId`), districtId: expectString(dto.districtId, `${path}.districtId`), indicatorId: expectIndicatorId(dto.indicatorId, `${path}.indicatorId`), delta: expectNumber(dto.delta, `${path}.delta`) };
+  });
   const stringList = (value: unknown, path: string) => expectArray(value, path).map((entry, index) => expectString(entry, `${path}[${index}]`));
   const explanationSource = expectString(root.explanationSource, "explanationSource");
   if (explanationSource !== "llm" && explanationSource !== "mock") throw new ApiContractError("Некорректный ответ API: неизвестный источник объяснения.");
-  return { spent: expectNumber(root.spent, "spent"), remaining: expectNumber(root.remaining, "remaining"), baselineScore: expectNumber(root.baselineScore, "baselineScore"), score: expectNumber(root.score, "score"), districts, appliedSynergies, explanation: { summary: expectString(explanation.summary, "explanation.summary"), strengths: stringList(explanation.strengths, "explanation.strengths"), risks: stringList(explanation.risks, "explanation.risks"), recommendations: stringList(explanation.recommendations, "explanation.recommendations") }, explanationSource, explanationLocale: parseApiLocale(root.explanationLocale, "explanationLocale") };
+  // Older API builds without the field always answered in Russian (documented fallback).
+  const explanationLocale = root.explanationLocale === undefined ? "ru-RU" : expectString(root.explanationLocale, "explanationLocale");
+  if (explanationLocale !== "ru-RU" && explanationLocale !== "kk-KZ" && explanationLocale !== "en-US") throw new ApiContractError("Некорректный ответ API: неизвестный язык объяснения.");
+  return { spent: expectNumber(root.spent, "spent"), remaining: expectNumber(root.remaining, "remaining"), baselineScore: expectNumber(root.baselineScore, "baselineScore"), score: expectNumber(root.score, "score"), districts, appliedSynergies, appliedEffects, explanation: { summary: expectString(explanation.summary, "explanation.summary"), strengths: stringList(explanation.strengths, "explanation.strengths"), risks: stringList(explanation.risks, "explanation.risks"), recommendations: stringList(explanation.recommendations, "explanation.recommendations") }, explanationSource, explanationLocale };
 }
 
-export function evaluationToVm(dto: ApiEvaluationDto, contentLanguage: Locale | null = null): EvaluationVM {
-  const explanationLocale = parseApiLocale(dto.explanationLocale, "explanationLocale");
-  if (explanationLocale !== null && contentLanguage !== null && explanationLocale !== contentLanguage) {
-    throw new ApiContractError("Некорректный ответ API: Content-Language не совпадает с explanationLocale.");
-  }
+export function evaluationToVm(dto: ApiEvaluationDto): EvaluationVM {
   const districts: DistrictResultVM[] = dto.districts.map((district) => {
     const indicatorDeltas: Partial<Record<IndicatorId, number>> = {};
     for (const id of indicatorIds) indicatorDeltas[id] = district.indicatorsAfter[id] - district.indicatorsBefore[id];
     return { ...district, indicatorsBefore: district.indicatorsBefore as IndicatorValues, indicatorsAfter: district.indicatorsAfter as IndicatorValues, scoreDelta: district.scoreAfter - district.scoreBefore, indicatorDeltas };
   });
   const appliedSynergies: AppliedSynergyVM[] = dto.appliedSynergies.map((item) => ({ ...item, measureIds: item.measureIds, indicatorId: item.indicatorId as IndicatorId }));
-  return { spent: dto.spent, remaining: dto.remaining, baselineScore: dto.baselineScore, score: dto.score, scoreDelta: dto.score - dto.baselineScore, districts, appliedEffects: null, appliedSynergies, explanation: dto.explanation, explanationSource: dto.explanationSource, explanationLocale: explanationLocale ?? contentLanguage, source: "api" };
+  const appliedEffects: AppliedEffectVM[] | null = dto.appliedEffects?.map((item) => ({ ...item, indicatorId: item.indicatorId as IndicatorId })) ?? null;
+  return { spent: dto.spent, remaining: dto.remaining, baselineScore: dto.baselineScore, score: dto.score, scoreDelta: dto.score - dto.baselineScore, districts, appliedEffects, appliedSynergies, explanation: dto.explanation, explanationSource: dto.explanationSource, explanationLocale: dto.explanationLocale, source: "api" };
 }
