@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useId } from "react";
 import type { DistrictId, ScenarioVM } from "@/lib/contracts/ui";
 import { Badge, Button, Reveal, Skeleton } from "@/components/ui";
-import { AtlasSketch } from "./AtlasSketch";
+import { CityScene } from "./CityScene";
 import { DistrictExplorer } from "./DistrictExplorer";
 import { formatAmount, formatScore, plural } from "./format";
 import styles from "./home.module.css";
@@ -89,7 +89,11 @@ export function CityHome({
         </Reveal>
 
         <div className={styles.heroArt}>
-          <AtlasSketch />
+          <CityScene
+            districtIds={scenario?.districts.map((district) => district.id) ?? []}
+            selectedDistrictId={selectedDistrictId}
+            onSelectDistrict={onSelectDistrict}
+          />
         </div>
 
         <Reveal className={styles.facts} index={1}>

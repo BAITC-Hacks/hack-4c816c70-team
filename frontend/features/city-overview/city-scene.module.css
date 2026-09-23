@@ -1,0 +1,55 @@
+.scene {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* Высота зарезервирована заранее: текст и CTA не ждут canvas */
+.stage {
+  position: relative;
+  aspect-ratio: 600 / 440;
+  width: 100%;
+}
+
+.canvasHost,
+.fallback {
+  position: absolute;
+  inset: 0;
+}
+
+.canvasHost {
+  opacity: 0;
+  transition: opacity 500ms var(--ease-out);
+}
+
+.canvasVisible {
+  opacity: 1;
+}
+
+.fallback {
+  display: grid;
+  align-items: center;
+  transition: opacity 400ms var(--ease-standard);
+  pointer-events: none;
+}
+
+.fallbackHidden {
+  opacity: 0;
+}
+
+.caption {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  text-align: right;
+}
+
+.captionNote {
+  color: var(--color-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvasHost,
+  .fallback {
+    transition: none;
+  }
+}

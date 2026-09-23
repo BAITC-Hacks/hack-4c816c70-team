@@ -945,10 +945,21 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /*
+   * Мобильная шапка сайта выше --header-height (две строки, ~105 px при 64 px в токене),
+   * поэтому липкие фильтры уходили бы под неё. На узком экране они в обычном потоке.
+   */
   .filters {
+    position: static;
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
+  }
+
+  /* При переходе с клавиатуры элемент в фокусе не прячется под шапку или нижнюю панель. */
+  .planner :is(button, input, select) {
+    scroll-margin-top: var(--space-6, 32px);
+    scroll-margin-bottom: calc(var(--mobile-bar-height) + var(--space-4, 16px) + env(safe-area-inset-bottom, 0px));
   }
 
   .chip {
