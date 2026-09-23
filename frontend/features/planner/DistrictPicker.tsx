@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { Select } from "@/components/ui/Select";
 import type { DistrictId } from "@/lib/contracts/ui";
 import { describeConflict, type PlannerText } from "./localize";
 import type { DistrictOption } from "./selection-rules";
@@ -27,29 +28,25 @@ export function DistrictPicker({ t, options, value, label, children, onChange }:
 
   return (
     <div className={styles.picker}>
-      <label htmlFor={id} className={styles.pickerLabel}>
+      <label id={`${id}-label`} htmlFor={id} className={styles.pickerLabel}>
         {label}
       </label>
-      <select
+      <Select
         id={id}
-        className={styles.select}
         value={value}
-        aria-describedby={hintId}
-        aria-invalid={isUnknown || conflicts.length > 0}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        <option value="">{t.copy.notSelected}</option>
-        {isUnknown ? <option value={value}>{t.copy.unknownDistrictOption(value)}</option> : null}
-        {options.map((option) => (
-          <option
-            key={option.id}
-            value={option.id}
-            disabled={option.conflicts.length > 0 && option.id !== value}
-          >
-            {option.conflicts.length > 0 ? t.copy.districtOptionConflict(t.district(option.id)) : t.district(option.id)}
-          </option>
-        ))}
-      </select>
+        labelledBy={`${id}-label`}
+        describedBy={hintId}
+        invalid={isUnknown || conflicts.length > 0}
+        onChange={onChange}
+        options={[
+          { value: "", label: t.copy.notSelected },
+          ...(isUnknown ? [{ value, label: t.copy.unknownDistrictOption(value) }] : []),
+          ...options.map((option) => ({ value: option.id,
+            label: option.conflicts.length > 0 ? t.copy.districtOptionConflict(t.district(option.id)) : t.district(option.id),
+            disabled: option.conflicts.length > 0 && option.id !== value,
+          })),
+        ]}
+      />
       <div id={hintId} className={styles.pickerHint}>
         {current && conflicts.length > 0 ? (
           <p className={styles.textDanger}>

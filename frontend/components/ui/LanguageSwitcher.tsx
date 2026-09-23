@@ -3,6 +3,7 @@
 import { useLocale, type Locale } from "@/lib/i18n";
 import { LANGUAGE_OPTIONS, uiMessages } from "./messages";
 import styles from "./LanguageSwitcher.module.css";
+import { Select } from "./Select";
 
 export interface LanguageSwitcherProps {
   readonly className?: string;
@@ -10,7 +11,7 @@ export interface LanguageSwitcherProps {
 
 /**
  * Компактный выбор языка: видимые РУС / ҚАЗ / ENG, доступное имя — полное
- * название текущего языка. Нативный select: клавиатура и экранные чтецы из коробки.
+ * название текущего языка. Общий combobox с клавиатурным управлением.
  */
 export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const { locale, setLocale } = useLocale();
@@ -19,21 +20,14 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
 
   return (
     <span className={className ? `${styles.wrap} ${className}` : styles.wrap}>
-      <select
-        className={styles.select}
+      <Select
+        compact
         value={locale}
-        aria-label={`${copy.languageLabel}: ${current.name}`}
-        onChange={(event) => setLocale(event.target.value as Locale)}
-      >
-        {LANGUAGE_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value} lang={option.value} title={option.name}>
-            {option.short}
-          </option>
-        ))}
-      </select>
-      <svg className={styles.chevron} viewBox="0 0 12 12" aria-hidden="true">
-        <path d="M3 4.5 6 7.5l3-3" />
-      </svg>
+        displayValue={current.short}
+        ariaLabel={`${copy.languageLabel}: ${current.name}`}
+        onChange={(value) => setLocale(value as Locale)}
+        options={LANGUAGE_OPTIONS.map((option) => ({ value: option.value, label: option.name, lang: option.value }))}
+      />
     </span>
   );
 }
