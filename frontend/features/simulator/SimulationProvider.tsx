@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { validateDraft } from "@/features/planner";
+import { useLocale } from "@/lib/i18n";
 import type { ChoiceDraft } from "@/lib/contracts/ui";
 import { useSimulation } from "./use-simulation";
 
@@ -14,7 +15,8 @@ interface SimulationContextValue extends Simulation {
 const SimulationContext = createContext<SimulationContextValue | null>(null);
 
 export function SimulationProvider({ children }: { readonly children: ReactNode }) {
-  const simulation = useSimulation(validateDraft);
+  const { locale } = useLocale();
+  const simulation = useSimulation(validateDraft, locale);
   const router = useRouter();
   const pathname = usePathname();
   const navigatedRequestId = useRef<number | null>(null);

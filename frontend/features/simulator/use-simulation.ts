@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { ApiClientError, evaluateChoices, getScenario } from "@/lib/api/client";
 import { buildEvaluatePayload } from "@/lib/api/payload";
 import type { ChoiceDraft, ScenarioVM, ValidateDraft } from "@/lib/contracts/ui";
+import type { Locale } from "@/lib/i18n";
 import { initialSimulatorState, simulatorReducer } from "./simulator-reducer";
 
 function apiMessage(error: unknown): string {
@@ -40,7 +41,7 @@ function restoreDraft(scenario: ScenarioVM, validateDraft: ValidateDraft): reado
   }
 }
 
-export function useSimulation(validateDraft: ValidateDraft) {
+export function useSimulation(validateDraft: ValidateDraft, locale: Locale) {
   const [state, dispatch] = useReducer(simulatorReducer, initialSimulatorState);
   const requestId = useRef(0);
   const scenarioController = useRef<AbortController | null>(null);
@@ -50,13 +51,18 @@ export function useSimulation(validateDraft: ValidateDraft) {
   const evaluationInFlight = useRef(false);
   const draftHydrated = useRef(false);
   const skipFirstPersist = useRef(false);
+  const localeRef = useRef(locale);
+
+  useEffect(() => {
+    localeRef.current = locale;
+  }, [locale]);
 
   const loadScenario = useCallback(async () => {
     scenarioController.current?.abort();
     const controller = new AbortController();
     scenarioController.current = controller;
     dispatch({ type: "scenario-loading" });
-    try { dispatch({ type: "scenario-ready", scenario: await getScenario(controller.signal) }); }
+    try { dispatch({ type: "scenario-ready", scenario: await getScenario(localeRef.current, controller.signal) }); }
     catch (error) { if (!controller.signal.aborted) dispatch({ type: "scenario-error", message: apiMessage(error) }); }
   }, []);
 
@@ -94,7 +100,7 @@ export function useSimulation(validateDraft: ValidateDraft) {
     const controller = new AbortController();
     evaluationController.current = controller;
     dispatch({ type: "evaluate-start", requestId: id, submittedChoices });
-    try { dispatch({ type: "evaluate-success", requestId: id, revision, result: await evaluateChoices(buildEvaluatePayload(state.scenario.scenario, submittedChoices), controller.signal) }); }
+    try { dispatch({ type: "evaluate-success", requestId: id, revision, result: await evaluateChoices(buildEvaluatePayload(state.scenario.scenario, submittedChoices), localeRef.current, controller.signal) }); }
     catch (error) { if (!controller.signal.aborted) dispatch({ type: "evaluate-error", requestId: id, revision, message: apiMessage(error) }); }
     finally { evaluationInFlight.current = false; }
   }, [state, validateDraft]);

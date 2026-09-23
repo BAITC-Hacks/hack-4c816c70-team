@@ -1,6 +1,8 @@
 import { evaluationToVm, parseEvaluationDto, parseScenarioDto, scenarioToVm } from "@/lib/api/adapter";
 import type { ApiEvaluateRequestDto } from "@/lib/contracts/api.generated";
 import type { EvaluationVM, ScenarioVM } from "@/lib/contracts/ui";
+import { intlLocales, type Locale } from "@/lib/i18n";
+import { parseApiLocale } from "./adapter";
 import { ApiClientError, normalizeApiError } from "./errors";
 import type { ApiErrorKind } from "./errors";
 
@@ -15,18 +17,20 @@ export function normalizeApiUrl(value = process.env.NEXT_PUBLIC_API_URL): string
   return baseUrl.replace(/\/+$/, "");
 }
 
-async function requestJson(path: string, init: RequestInit, signal?: AbortSignal): Promise<unknown> {
+type JsonResponse = { readonly body: unknown; readonly contentLanguage: Locale | null };
+
+async function requestJson(path: string, init: RequestInit, locale: Locale, signal?: AbortSignal): Promise<JsonResponse> {
   const controller = new AbortController();
   const timeout = globalThis.setTimeout(() => controller.abort("timeout"), REQUEST_TIMEOUT_MS);
   const abortForwarder = () => controller.abort(signal?.reason);
   signal?.addEventListener("abort", abortForwarder, { once: true });
   try {
-    const response = await fetch(`${normalizeApiUrl()}${path}`, { ...init, signal: controller.signal, headers: { Accept: "application/json", ...init.headers } });
+    const response = await fetch(`${normalizeApiUrl()}${path}`, { ...init, signal: controller.signal, headers: { Accept: "application/json", "Accept-Language": intlLocales[locale], ...init.headers } });
     const text = await response.text();
     let body: unknown;
     try { body = text.length === 0 ? null : JSON.parse(text); } catch { throw new ApiClientError("invalid-json", "Сервер вернул ответ в неверном формате.", response.status); }
     if (!response.ok) throw normalizeApiError(body, response.status);
-    return body;
+    return { body, contentLanguage: parseApiLocale(response.headers.get("Content-Language"), "Content-Language") };
   } catch (error) {
     if (error instanceof ApiClientError) throw error;
     if (controller.signal.aborted) {
@@ -40,12 +44,15 @@ async function requestJson(path: string, init: RequestInit, signal?: AbortSignal
   }
 }
 
-export async function getScenario(signal?: AbortSignal): Promise<ScenarioVM> {
-  try { return scenarioToVm(parseScenarioDto(await requestJson("/api/scenario", { method: "GET" }, signal))); }
+export async function getScenario(locale: Locale, signal?: AbortSignal): Promise<ScenarioVM> {
+  try { return scenarioToVm(parseScenarioDto((await requestJson("/api/scenario", { method: "GET" }, locale, signal)).body)); }
   catch (error) { if (error instanceof ApiClientError) throw error; throw new ApiClientError("contract", error instanceof Error ? error.message : "Некорректный контракт сценария."); }
 }
 
-export async function evaluateChoices(payload: ApiEvaluateRequestDto, signal?: AbortSignal): Promise<EvaluationVM> {
-  try { return evaluationToVm(parseEvaluationDto(await requestJson("/api/simulations/evaluate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, signal))); }
+export async function evaluateChoices(payload: ApiEvaluateRequestDto, locale: Locale, signal?: AbortSignal): Promise<EvaluationVM> {
+  try {
+    const response = await requestJson("/api/simulations/evaluate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, locale, signal);
+    return evaluationToVm(parseEvaluationDto(response.body), response.contentLanguage);
+  }
   catch (error) { if (error instanceof ApiClientError) throw error; throw new ApiClientError("contract", error instanceof Error ? error.message : "Некорректный контракт результата."); }
 }

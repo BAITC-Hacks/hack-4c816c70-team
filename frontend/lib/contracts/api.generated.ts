@@ -95,6 +95,8 @@ export interface ApiEvaluationDto {
   appliedSynergies: ApiAppliedSynergyDto[];
   explanation: ApiExplanationDto;
   explanationSource: "llm" | "mock";
+  /** BCP 47 tag for the language in explanation, e.g. ru-RU or kk-KZ. */
+  explanationLocale: string | null;
 }
 
 export interface ApiErrorDto {

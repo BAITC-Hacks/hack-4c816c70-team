@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 import { normalizeApiError } from "../lib/api/errors";
+import { parseApiLocale } from "../lib/api/adapter";
 import { buildEvaluatePayload } from "../lib/api/payload";
 import type { ScenarioVM } from "../lib/contracts/ui";
 
@@ -15,4 +16,12 @@ test("documented API errors retain the server message and code", () => {
   assert.equal(error.status, 422);
   assert.equal(error.code, "BUDGET_EXCEEDED");
   assert.equal(error.message, "Стоимость набора 121 превышает бюджет 100.");
+});
+
+test("published explanation locale and Content-Language tags map to supported UI locales", () => {
+  assert.equal(parseApiLocale("ru-RU", "explanationLocale"), "ru");
+  assert.equal(parseApiLocale("kk-KZ", "explanationLocale"), "kk");
+  assert.equal(parseApiLocale("en-US", "Content-Language"), "en");
+  assert.equal(parseApiLocale(null, "Content-Language"), null);
+  assert.throws(() => parseApiLocale("kz-KZ", "explanationLocale"), /неподдерживаемый язык/);
 });

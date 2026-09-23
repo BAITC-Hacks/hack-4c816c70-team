@@ -87,3 +87,10 @@
 
 - Замечание P2 исправлено: `createLocaleStore` держит выбранный язык в памяти текущей вкладки, если `localStorage` запрещён, заполнен или выбрасывает исключение. При доступном storage он по-прежнему является источником для reload и события `storage` между вкладками.
 - Добавлены регрессии blocked-storage и normal-storage. Финальный прогон: `npm test` 46/46, `npm run lint`, `npm run typecheck`, `npm run build`, `git diff --check` — успешно.
+
+### Подтверждённый серверный языковой контракт
+
+- Клиент отправляет `Accept-Language` (`ru-RU`, `kk-KZ`, `en-US`) с запросами сценария и оценки, не меняя JSON body `{ choices }`.
+- Адаптер читает `explanationLocale` и `Content-Language`, нормализует BCP 47 tags и отклоняет противоречивый ответ. Результат хранит фактический язык explanation; при переключении UI прежний текст не переименовывается и не запускается новый POST.
+- Реальная проверка control set на опубликованном API: для ru-RU/kk-KZ/en-US совпали `Content-Language` и `explanationLocale`; получены русское, казахское и английское explanations, при неизменных `spent=95`, `remaining=5`, `Score 52.56 → 56.54`.
+- Browser: English result показал `AI analysis` и `Explanation language: English`; после перехода UI на kk уже полученный текст остался явно помечен как английский.

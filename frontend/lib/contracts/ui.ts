@@ -177,6 +177,8 @@ export interface EvaluationVM {
   readonly explanation: ExplanationVM;
   /** Origin of explanation text as reported by the backend; it never affects numbers. */
   readonly explanationSource: "llm" | "mock";
+  /** Actual language of the server-provided explanation, not the current UI language. */
+  readonly explanationLocale: import("@/lib/i18n").Locale | null;
   readonly source: "api" | "fixture";
 }
 
