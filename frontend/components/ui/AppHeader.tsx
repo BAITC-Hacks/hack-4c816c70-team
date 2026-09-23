@@ -6,6 +6,7 @@ import { useLocale } from "@/lib/i18n";
 import styles from "./AppHeader.module.css";
 import { uiMessages } from "./messages";
 import { cx } from "./cx";
+import { BrandMark } from "./BrandMark";
 
 export interface AppHeaderStep {
   readonly id: string;
@@ -82,12 +83,12 @@ export function AppHeader({ title, steps, activeStepId, onStepSelect, end, title
       <div className={styles.inner}>
         {titleHref ? (
           <Link href={titleHref} className={styles.title}>
-            <span className={styles.mark} aria-hidden="true" />
+            <BrandMark className={styles.mark} />
             <span className={styles.titleText}>{title}</span>
           </Link>
         ) : (
           <p className={styles.title}>
-            <span className={styles.mark} aria-hidden="true" />
+            <BrandMark className={styles.mark} />
             <span className={styles.titleText}>{title}</span>
           </p>
         )}

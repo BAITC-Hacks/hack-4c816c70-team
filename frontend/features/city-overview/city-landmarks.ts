@@ -16,6 +16,8 @@ export const LANDMARK_SITES = [
   { id: "baiterek", x: 292, y: 300, radius: 30 },
   { id: "nur-alem", x: 432, y: 349, radius: 49 },
   { id: "peace-palace", x: 485, y: 105, radius: 35 },
+  { id: "grand-mosque", x: 123, y: 109, radius: 55 },
+  { id: "otan-qorgaushylar", x: 291, y: 111, radius: 41 },
 ] as const;
 
 export function nearLandmark(x: number, y: number, padding = 0): boolean {
@@ -164,6 +166,99 @@ export function createCityLandmarks() {
     block(palace, -side / 2, y, 0, 0.024, 0.024, side, steel);
   }
   group.add(palace);
+
+  // Grand Mosque: turquoise central dome, four slender minarets and arcaded court.
+  // Sites balance the schematic five tiles; they do not assert real districts.
+  const mosque = new Group();
+  mosque.position.copy(world(123, 109));
+  block(mosque, 0, 0.06, 0, 4.6, 0.12, 4.6, limestone);
+  block(mosque, 0, 0.17, 0, 4.22, 0.1, 4.22);
+  block(mosque, 0, 0.65, -0.35, 2.85, 0.86, 2.42);
+  block(mosque, 0, 0.26, 1.3, 2.95, 0.06, 1.05, limestone);
+  const turquoise = material(0x2caca9, 0.22, 0.42);
+  const domeGeometry = track(new SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2));
+  function dome(parent: Group, x: number, y: number, z: number, radius: number) {
+    const mesh = new Mesh(domeGeometry, turquoise);
+    mesh.position.set(x, y, z);
+    mesh.scale.set(radius, radius * 1.06, radius);
+    parent.add(mesh);
+    beam(parent, new Vector3(x, y + radius, z), new Vector3(x, y + radius + 0.24, z), 0.018, gold);
+    const crescent = new Mesh(track(new TorusGeometry(0.08, 0.018, 4, 14, Math.PI * 1.55)), gold);
+    crescent.position.set(x, y + radius + 0.3, z);
+    crescent.rotation.z = -Math.PI * 0.77;
+    parent.add(crescent);
+  }
+  const drum = disc(mosque, 0.96, 0.29, 1.19);
+  drum.position.z = -0.35;
+  dome(mosque, 0, 1.33, -0.35, 1.05);
+  for (const x of [-1.09, 1.09]) for (const z of [-1.2, 0.55]) dome(mosque, x, 1.08, z, 0.31);
+  const minaretShaft = track(new CylinderGeometry(0.105, 0.18, 2.65, 12));
+  const minaretCap = track(new ConeGeometry(0.16, 0.5, 12));
+  for (const x of [-1.88, 1.88]) for (const z of [-1.88, 1.88]) {
+    const minaret = new Group();
+    minaret.position.set(x, 0.2, z);
+    disc(minaret, 0.25, 0.24, 0.12);
+    const shaft = new Mesh(minaretShaft, ivory);
+    shaft.position.y = 1.52;
+    minaret.add(shaft);
+    for (const height of [1.25, 2.1, 2.74]) disc(minaret, 0.21, 0.08, height);
+    const cap = new Mesh(minaretCap, turquoise);
+    cap.position.y = 3.04;
+    minaret.add(cap);
+    beam(minaret, new Vector3(0, 3.26, 0), new Vector3(0, 3.53, 0), 0.017, gold);
+    mosque.add(minaret);
+  }
+  const archGeometry = track(new TorusGeometry(0.21, 0.055, 4, 12, Math.PI));
+  for (let i = -3; i <= 3; i++) {
+    const x = i * 0.43;
+    const arch = new Mesh(archGeometry, ivory);
+    arch.position.set(x, 0.66, 1.82);
+    mosque.add(arch);
+    block(mosque, x - 0.2, 0.44, 1.82, 0.09, 0.47, 0.1);
+  }
+  block(mosque, 0, 0.5, 0.9, 0.46, 0.56, 0.04, darkGlass);
+  group.add(mosque);
+
+  // Otan Qorgaushylar: bundled golden ears, stepped plinth and memorial reliefs.
+  const memorial = new Group();
+  memorial.position.copy(world(291, 111));
+  disc(memorial, 1.9, 0.1, 0.04);
+  disc(memorial, 1.48, 0.14, 0.16);
+  disc(memorial, 0.94, 0.18, 0.31);
+  const bronze = material(0x997c48, 0.4, 0.52);
+  const earGeometry = track(new SphereGeometry(1, 7, 5));
+  for (let i = -4; i <= 4; i++) {
+    const x = i * 0.13;
+    const height = 3.65 - Math.abs(i) * 0.14;
+    beam(memorial, new Vector3(x * 0.6, 0.42, 0), new Vector3(x, height, 0), 0.085, gold);
+    for (let j = 0; j < 3; j++) for (const side of [-1, 1]) {
+      const ear = new Mesh(earGeometry, gold);
+      ear.position.set(x + side * 0.07, height - 0.12 - j * 0.15, 0);
+      ear.scale.set(0.065, 0.14, 0.07);
+      ear.rotation.z = side * -0.4;
+      memorial.add(ear);
+    }
+  }
+  for (const side of [-1, 1]) {
+    const relief = block(memorial, side * 1.13, 0.66, 0.24, 1.13, 0.57, 0.17, bronze);
+    relief.rotation.y = side * -0.25;
+    for (let i = 0; i < 5; i++) block(memorial, side * (0.72 + i * 0.2), 0.7, 0.37, 0.06, 0.3 + (i % 2) * 0.08, 0.07, gold);
+  }
+  const figure = new Mesh(track(new CylinderGeometry(0.1, 0.23, 1.12, 9)), bronze);
+  figure.position.set(0, 1, 0.39);
+  memorial.add(figure);
+  const head = new Mesh(track(new SphereGeometry(0.13, 10, 7)), bronze);
+  head.position.set(0, 1.66, 0.39);
+  memorial.add(head);
+  for (const side of [-1, 1]) beam(memorial, new Vector3(side * 0.13, 1.39, 0.38), new Vector3(side * 0.19, 1.25, 0.67), 0.055, bronze);
+  const bowl = new Mesh(track(new SphereGeometry(0.21, 12, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)), gold);
+  bowl.position.set(0, 1.31, 0.69);
+  memorial.add(bowl);
+  block(memorial, 0, 0.22, 1.15, 0.5, 0.13, 0.5, bronze);
+  const flame = new Mesh(track(new ConeGeometry(0.09, 0.27, 6)), lamp);
+  flame.position.set(0, 0.41, 1.15);
+  memorial.add(flame);
+  group.add(memorial);
 
   // Four crossings connect both banks. Sculptural arches alternate with road bridges.
   const crossings = [{ x: 96, y: 232, arch: false }, { x: 204, y: 202, arch: true },

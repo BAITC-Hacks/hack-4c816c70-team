@@ -360,14 +360,19 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
   materials.push(towerWhite, towerGold);
   const podium = new Mesh(track(new CylinderGeometry(0.85, 1, 0.22, 24)), towerWhite);
   podium.position.y = 0.33;
-  const shaft = new Mesh(track(new CylinderGeometry(0.1, 0.2, 4.6, 12)), towerWhite);
+  const shaft = new Mesh(track(new CylinderGeometry(0.26, 0.38, 4.6, 16)), towerWhite);
   shaft.position.y = 2.7;
   tower.add(podium, shaft);
-  const branchGeometry = track(new CylinderGeometry(0.035, 0.05, 1.5, 6));
+  // Broad fluted trunk and splayed crown remain legible at miniature scale.
+  const trunkRibGeometry = track(new CylinderGeometry(0.055, 0.075, 3.95, 6));
+  const branchGeometry = track(new CylinderGeometry(0.065, 0.085, 1.65, 8));
   for (let i = 0; i < 10; i += 1) {
     const branch = new Mesh(branchGeometry, towerWhite);
     const angle = (i / 10) * Math.PI * 2;
-    branch.position.set(Math.cos(angle) * 0.34, 5.15, Math.sin(angle) * 0.34);
+    const rib = new Mesh(trunkRibGeometry, towerWhite);
+    rib.position.set(Math.cos(angle) * 0.3, 2.6, Math.sin(angle) * 0.3);
+    tower.add(rib);
+    branch.position.set(Math.cos(angle) * 0.43, 5.05, Math.sin(angle) * 0.43);
     branch.rotation.set(Math.sin(angle) * 0.42, 0, -Math.cos(angle) * 0.42);
     tower.add(branch);
   }
