@@ -6,6 +6,9 @@ import "@/styles/globals.css";
 export const metadata: Metadata = {
   title: "Аким на 5 часов",
   description: "AI-симулятор городских решений для Astana Innovations",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

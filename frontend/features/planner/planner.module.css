@@ -14,6 +14,8 @@
   margin-inline: auto;
   padding: var(--space-6, 32px) clamp(16px, 3vw, 40px) var(--space-7, 48px);
   display: grid;
+  /* Явная колонка: неявная auto растягивалась по min-content и выводила контент за экран. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5, 24px);
   color: var(--color-ink, #142d38);
   font-family: var(--font-sans, system-ui, sans-serif);
@@ -45,7 +47,9 @@
 
 .intro {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2, 8px);
+  min-width: 0;
   max-width: 44rem;
 }
 
@@ -55,6 +59,8 @@
   font-weight: var(--weight-bold, 700);
   line-height: 1.05;
   letter-spacing: -0.02em;
+  /* Узкий экран с крупным текстом: слово переносится, только если не помещается целиком. */
+  overflow-wrap: break-word;
 }
 
 .lede {
@@ -307,7 +313,9 @@
 
 .facts > div {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  min-width: 0;
 }
 
 .facts dt {
@@ -316,6 +324,7 @@
 
 .facts dd {
   margin: 0;
+  overflow-wrap: anywhere;
   font-weight: var(--weight-medium, 500);
   font-variant-numeric: tabular-nums;
 }
@@ -596,10 +605,12 @@
   overscroll-behavior: contain;
 }
 
+/* Ряд переносится целиком: счётчик не сжимается, кнопка уходит на новую строку, а не за экран. */
 .trayHeader {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-3, 12px);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2, 8px) var(--space-3, 12px);
 }
 
 .trayTitle {
@@ -611,9 +622,11 @@
 }
 
 .counter {
+  flex: none;
   margin: 0 0 0 auto;
   color: var(--color-muted, #536671);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .counter strong {
@@ -1008,12 +1021,17 @@
     cursor: pointer;
   }
 
+  /* Части строки не рвутся внутри, но сама строка переносится при крупном тексте. */
   .mobileLine {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--space-3, 12px);
+    gap: 0 var(--space-3, 12px);
     font-size: var(--text-sm, 0.875rem);
     font-variant-numeric: tabular-nums;
+  }
+
+  .mobileLine > * {
     white-space: nowrap;
   }
 
