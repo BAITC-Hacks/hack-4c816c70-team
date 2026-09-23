@@ -16,3 +16,13 @@ test("documented API errors retain the server message and code", () => {
   assert.equal(error.code, "BUDGET_EXCEEDED");
   assert.equal(error.message, "Стоимость набора 121 превышает бюджет 100.");
 });
+
+test("empty and malformed error envelopes keep the HTTP status without throwing", () => {
+  for (const body of [null, undefined, false, 42, "unavailable", [], {}, { error: null }, { error: "unavailable" }, { error: { message: 42 } }]) {
+    const error = normalizeApiError(body, 503);
+    assert.equal(error.kind, "http");
+    assert.equal(error.status, 503);
+    assert.equal(error.code, undefined);
+    assert.equal(error.message, "Сервер вернул ошибку 503.");
+  }
+});
