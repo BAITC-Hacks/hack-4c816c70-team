@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
+import { AlternativesPanel, alternativesLoader } from "@/features/alternatives";
+import { validateDraft } from "@/features/planner";
 import { Results } from "@/features/results";
 import { useLocale, type Locale } from "@/lib/i18n";
 import { useSimulationContext } from "./SimulationProvider";
+import { choiceSetKey } from "./simulator-reducer";
+import { formatSimulationError } from "./error-messages";
 import styles from "./routes.module.css";
 
 const messages: Record<Locale, { readonly kicker: string; readonly title: string; readonly text: string; readonly action: string; readonly retryError: string; readonly retry: string }> = {
@@ -16,17 +19,21 @@ const messages: Record<Locale, { readonly kicker: string; readonly title: string
 
 export function ResultsPage() {
   const router = useRouter();
-  const { state, reset, evaluate } = useSimulationContext();
+  const { state, reset, evaluate, applyAlternative } = useSimulationContext();
   const { locale } = useLocale();
   const scenario = state.scenario.status === "ready" ? state.scenario.scenario : null;
-  // A re-evaluation started from this page keeps the previous report visible until the new one arrives.
-  const [shown, setShown] = useState<Extract<typeof state.evaluation, { status: "success" }> | null>(null);
-  if (state.evaluation.status === "success" && state.evaluation !== shown) setShown(state.evaluation);
-  const retainPrevious = (state.evaluation.status === "pending" || state.evaluation.status === "error") && shown?.revision === state.revision;
-  if (state.evaluation.status !== "success" && !retainPrevious && shown !== null) setShown(null);
-  const evaluation = state.evaluation.status === "success" ? state.evaluation : retainPrevious ? shown : null;
+  // Keep the latest accepted result across navigation during a retry, only for the same plan.
+  const latest = state.history.at(-1);
+  const retained = latest?.key === choiceSetKey(state.choices) ? latest : null;
+  const evaluation = state.evaluation.status === "success" ? state.evaluation
+    : state.evaluation.status === "pending" || state.evaluation.status === "error" ? retained : null;
   const copy = messages[locale];
   // Re-evaluation reuses the submitted choices (state.choices equals them while a result is shown) and the current UI language.
-  if (scenario && evaluation) return <main className={styles.workspace}>{state.evaluation.status === "error" ? <section role="alert"><p>{copy.retryError}</p><Button onClick={() => void evaluate()}>{copy.retry}</Button></section> : null}<Results scenario={scenario} result={evaluation.result} submittedChoices={evaluation.submittedChoices} onEdit={() => router.push("/decisions")} onReset={() => { reset(); router.push("/decisions"); }} onReevaluate={() => void evaluate()} isReevaluating={state.evaluation.status === "pending"} /></main>;
+  if (scenario && evaluation) {
+    // Apply only moves choices into the plan and opens decisions; the user evaluates explicitly there.
+    const basisKey = `${state.revision}|${choiceSetKey(evaluation.submittedChoices)}`;
+    const alternatives = <AlternativesPanel scenario={scenario} submittedChoices={evaluation.submittedChoices} basisKey={basisKey} loader={alternativesLoader} canApply={(choices) => validateDraft(scenario, choices).canSubmit} applyDisabled={state.evaluation.status === "pending"} onApply={(choices) => { applyAlternative(choices, basisKey); router.push("/decisions"); }} />;
+    return <main className={styles.workspace}>{state.evaluation.status === "error" ? <section role="alert"><p>{copy.retryError}</p><p>{formatSimulationError(state.evaluation.error, locale)}</p><Button onClick={() => void evaluate()}>{copy.retry}</Button></section> : null}<Results scenario={scenario} result={evaluation.result} submittedChoices={evaluation.submittedChoices} history={state.history} onEdit={() => router.push("/decisions")} onReset={() => { reset(); router.push("/decisions"); }} onReevaluate={() => void evaluate()} isReevaluating={state.evaluation.status === "pending"} afterSummary={alternatives} /></main>;
+  }
   return <main className={styles.state}><p className={styles.kicker}>{copy.kicker}</p><h1>{copy.title}</h1><p>{copy.text}</p><Button size="lg" onClick={() => router.push("/decisions")}>{copy.action}</Button></main>;
 }

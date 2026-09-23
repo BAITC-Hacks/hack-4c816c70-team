@@ -79,6 +79,11 @@ export function useSimulation(validateDraft: ValidateDraft) {
   }, [state.choices, state.scenario]);
 
   const setChoices = useCallback((choices: readonly ChoiceDraft[]) => dispatch({ type: "set-choices", choices }), []);
+  /** Moves an alternative into the plan. Evaluate is a separate click so it reads the new state, not this render's. */
+  const applyAlternative = useCallback((choices: readonly ChoiceDraft[], basisKey: string) => {
+    if (state.scenario.status !== "ready" || !validateDraft(state.scenario.scenario, choices).canSubmit) return;
+    dispatch({ type: "apply-alternative", choices, basisKey });
+  }, [state.scenario, validateDraft]);
   const evaluate = useCallback(async () => {
     if (state.scenario.status !== "ready" || state.evaluation.status === "pending" || evaluationInFlight.current) return;
     const validation = validateDraft(state.scenario.scenario, state.choices);
@@ -97,5 +102,5 @@ export function useSimulation(validateDraft: ValidateDraft) {
   }, [state, validateDraft, intlLocale]);
 
   const reset = useCallback(() => { evaluationController.current?.abort(); evaluationInFlight.current = false; requestId.current += 1; try { sessionStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* Storage is optional. */ } dispatch({ type: "reset" }); }, []);
-  return { state, dispatch, loadScenario, setChoices, evaluate, reset };
+  return { state, dispatch, loadScenario, setChoices, applyAlternative, evaluate, reset };
 }

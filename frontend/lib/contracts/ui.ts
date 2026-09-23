@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 /**
  * Internal component contract. This is NOT the backend DTO or an OpenAPI schema.
  * The API adapter maps the published backend contract into these view models.
@@ -182,10 +184,23 @@ export interface EvaluationVM {
   readonly source: "api" | "fixture";
 }
 
+/** One successful evaluation kept for comparison; numbers come from the API response as is. */
+export interface EvaluationAttemptVM {
+  /** Sorted measureId/districtId pairs: the same set in another order or language is the same attempt. */
+  readonly key: string;
+  readonly requestId: number;
+  readonly submittedChoices: readonly ChoiceDraft[];
+  readonly result: EvaluationVM;
+}
+
 export interface ResultsProps {
   readonly scenario: ScenarioVM;
   readonly result: EvaluationVM;
   readonly submittedChoices: readonly ChoiceDraft[];
+  /** Up to two last successful attempts with different choice sets, oldest first; the last one is the current result. */
+  readonly history?: readonly EvaluationAttemptVM[];
+  /** Optional block rendered right after the attempt comparison (plan alternatives). */
+  readonly afterSummary?: ReactNode;
   readonly onEdit: () => void;
   readonly onReset: () => void;
   /** Re-runs evaluate with the same submitted choices to get the explanation in the current UI language. */

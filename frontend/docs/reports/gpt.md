@@ -116,3 +116,15 @@ Backend поддерживает `Accept-Language: ru-RU / kk-KZ / en-US` и в�
 - Для неизвестных HTTP-кодов и ошибок контракта русская `detail` больше не присоединяется к пользовательской строке. Пользователь видит только локализованное основное сообщение; техническую деталь UI не показывает, так как она не требуется для восстановления сценария.
 - Ошибка хранит стабильные `kind`/`code` и форматируется во время рендера: уже показанная ошибка меняет текст сразу при переходе RU/KK/EN.
 - Регрессия проверяет unknown HTTP `500` и contract response на KK и EN, исключая русский detail. Повторно успешны lint, 55/55 тестов и production build.
+
+
+## Final integration 2026-09-23
+
+- Resolved simulator conflicts while retaining localized SimulationError, two-attempt history and the applied-plan banner.
+- Connected POST /api/simulations/alternatives through runtime DTO validation; normalized city districtId:null to omitted UI fields. The loader uses the shared API base URL and supports same-origin NEXT_PUBLIC_API_URL=/.
+- Displayed all three strategy winners and the separate AI-selected recommendation with its argument/tradeoff facts. Applying either a strategy or the recommendation changes choices and opens Decisions; evaluation remains explicit.
+- Guarded application against a changed basis, retained the latest matching report across navigation during retry, and blocked duplicate alternative requests.
+- Limited comparison verdicts to Score and enforced the Kazakh decimal comma with Intl.NumberFormat.formatToParts.
+- Validation: 73 tests passed; lint passed; production build passed; typecheck passed after Next generated route types. No conflict markers remain in frontend source.
+- Contract smoke: the frontend adapter accepted 9 actual local mock API responses (all 3 goals in RU/KK/EN) at localhost:8083. No real OpenAI requests were used.
+- Browser and fresh Docker Compose acceptance are delegated to the integration agent and are not claimed by this report.

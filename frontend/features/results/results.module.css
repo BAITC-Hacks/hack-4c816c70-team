@@ -119,6 +119,37 @@
 .explanationSource { color: var(--color-muted); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
 .explanation h3 { margin-top: var(--space-2); font-size: var(--text-lg); }
 
+.attempts {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-7);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
+}
+.attempts h2 { font-size: var(--text-2xl); }
+.attempts h3 { margin-top: var(--space-2); font-size: var(--text-lg); }
+.attempts h4 { color: var(--color-muted); font-size: var(--text-sm); font-weight: var(--weight-bold); letter-spacing: 0.08em; text-transform: uppercase; }
+.attemptVerdict { font-weight: var(--weight-semibold); }
+.attemptNote { max-width: var(--measure); color: var(--color-muted); font-size: var(--text-sm); }
+.attemptTable { width: 100%; table-layout: fixed; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.attemptTable th,
+.attemptTable td { padding: var(--space-2) var(--space-2); border-top: 1px solid var(--color-border); text-align: right; overflow-wrap: anywhere; }
+.attemptTable th:first-child { width: 34%; text-align: left; }
+.attemptTable thead th { border-top: 0; color: var(--color-muted); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.attemptTable tbody th { font-weight: var(--weight-semibold); }
+.attemptTable .attemptGroup { padding-top: var(--space-4); color: var(--color-muted); font-size: var(--text-sm); text-align: left; }
+.attemptColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.attemptMeasures { display: grid; gap: var(--space-2); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+.attemptMeasures li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 var(--space-3); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.attemptMeasures li[data-changed] { border-color: var(--color-accent); }
+.attemptMeasures b { grid-row: span 3; font-variant-numeric: tabular-nums; }
+.attemptMeasures span { min-width: 0; overflow-wrap: anywhere; }
+.attemptDistrict { color: var(--color-muted); font-size: var(--text-sm); }
+.attemptMeasures em { color: var(--color-accent); font-size: var(--text-sm); font-style: normal; font-weight: var(--weight-semibold); }
+
 @media (max-width: 760px) {
   .header { align-items: start; flex-direction: column; }
   .actions { justify-content: start; }
@@ -129,4 +160,11 @@
   .explanation { padding: var(--space-4); }
   .district { padding: var(--space-4); }
   .indicators div { grid-template-columns: 1fr; gap: var(--space-2); }
+  .attempts { padding: var(--space-4); }
+  .attemptColumns { grid-template-columns: 1fr; }
+  .attemptTable { font-size: var(--text-sm); }
+  .attemptTable th,
+  .attemptTable td { padding: var(--space-2) var(--space-1); }
+  .attemptTable th:first-child { width: 28%; }
+  .attemptTable thead th { font-size: var(--text-xs); letter-spacing: -0.01em; overflow-wrap: normal; hyphens: auto; }
 }

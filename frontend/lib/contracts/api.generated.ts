@@ -117,3 +117,47 @@ export interface ApiErrorDto {
     message: string;
   };
 }
+
+
+/** POST /api/simulations/alternatives, from AlternativeModels.cs and published Swagger. */
+export type ApiAlternativeGoal = "score" | "equity" | "economy";
+export interface ApiPlanChoiceDto { measureId: string; districtId?: string | null }
+export interface ApiScoreBreakdownDto { averageScore: number; minDistrictScore: number; criticalCount: number }
+export interface ApiPlanResultDto {
+  choices: ApiPlanChoiceDto[];
+  spent: number;
+  remaining: number;
+  score: number;
+  breakdown: ApiScoreBreakdownDto;
+  districts: { id: string; name: string; score: number }[];
+}
+export interface ApiPlanFactDto { id: string; text: string }
+export interface ApiAlternativeVariantDto {
+  id: string;
+  strategies: ApiAlternativeGoal[];
+  title: string;
+  plan: ApiPlanResultDto;
+  change: { kind: "move" | "replace"; removed: ApiPlanChoiceDto; added: ApiPlanChoiceDto; text: string };
+  delta: { score: number; averageScore: number; minDistrictScore: number; criticalCount: number; spent: number; districts: Record<string, number> };
+  arguments: ApiPlanFactDto[];
+  tradeoffs: ApiPlanFactDto[];
+}
+export interface ApiAlternativesDto {
+  goal: ApiAlternativeGoal;
+  searchScope: "single_swap";
+  candidatesChecked: number;
+  validCandidates: number;
+  original: ApiPlanResultDto;
+  bestByGoal: Record<ApiAlternativeGoal, string | null>;
+  variants: ApiAlternativeVariantDto[];
+  recommendation: {
+    status: "improved" | "no_improvement";
+    variantId: string | null;
+    title: string;
+    text: string;
+    arguments: ApiPlanFactDto[];
+    tradeoffs: ApiPlanFactDto[];
+    source: "mock" | "llm";
+  };
+  locale: ApiExplanationLocale;
+}
