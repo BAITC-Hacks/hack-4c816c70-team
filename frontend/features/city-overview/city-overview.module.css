@@ -48,14 +48,29 @@
 
 .heroMetrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: var(--space-4);
   border-top: 2px solid var(--color-ink);
 }
 
+/* Подпись, значение и пояснение каждой метрики — строки общей сетки:
+   значения стоят на одной линии, даже если подпись переносится. */
 .heroMetric {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: var(--space-1);
   padding: var(--space-4) 0 var(--space-3);
   border-bottom: 1px solid var(--color-border);
+}
+
+.heroMetric .heroMetricBody {
+  display: contents;
+}
+
+.heroMetricBody > :first-child,
+.heroMetricBody > :nth-child(2) {
+  align-self: end;
 }
 
 .heroMetricScore {
@@ -91,6 +106,12 @@
     grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr);
     gap: var(--space-7);
   }
+}
+
+/* ===== Схема, подробности и карточки ===== */
+.explorer {
+  display: grid;
+  gap: var(--space-6);
 }
 
 /* ===== Сцена: атлас + подробности ===== */
@@ -161,10 +182,11 @@
   outline: none;
 }
 
+/* Контур области контрастен фону схемы не меньше 3:1 */
 .plateShape {
   fill: var(--color-surface);
-  stroke: var(--color-border-strong);
-  stroke-width: 1.5;
+  stroke: var(--color-muted);
+  stroke-width: 1.25;
   stroke-linejoin: round;
   transition: fill var(--duration-fast) var(--ease-standard);
 }
@@ -289,7 +311,7 @@
   }
 
   .plateName {
-    font-size: 25px;
+    font-size: 29px;
     transform: translateX(-18px);
   }
 
@@ -297,13 +319,15 @@
     display: none;
   }
 
-  .plateProfile,
-  .platePill {
-    transform: translateY(-16px);
+  .plateProfile {
+    transform: translateY(-12px);
   }
 
-  .platePillText {
-    font-size: 15px;
+  /* Метка масштабируется целиком, чтобы текст не вышел за рамку */
+  .platePill {
+    transform-box: fill-box;
+    transform-origin: 0 0;
+    transform: translateY(-10px) scale(1.4);
   }
 }
 
@@ -493,7 +517,8 @@
 }
 
 .card:focus-visible {
-  outline: none;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
   box-shadow: var(--focus-ring);
 }
 

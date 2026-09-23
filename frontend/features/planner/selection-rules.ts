@@ -282,7 +282,7 @@ export function getAddAvailability(
 
   if (choices.length >= rules.requiredChoices) {
     reasons.push(
-      `Уже выбрано ${choices.length} из ${rules.requiredChoices}: уберите одну меру, чтобы добавить эту.`,
+      `План заполнен: ${choices.length} из ${rules.requiredChoices}. Уберите меру, чтобы добавить эту.`,
     );
   }
 

@@ -1,0 +1,76 @@
+.switcher {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+}
+
+.option {
+  position: relative;
+  display: flex;
+}
+
+.input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  pointer-events: none;
+}
+
+.label {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  color: var(--color-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.label svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.label:hover {
+  color: var(--color-ink);
+}
+
+.input:checked + .label {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.input:focus-visible + .label {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+@media (max-width: 420px) {
+  .label {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* Цель касания 44 px без раздувания визуала */
+@media (pointer: coarse) {
+  .label {
+    width: 44px;
+    height: 44px;
+  }
+}

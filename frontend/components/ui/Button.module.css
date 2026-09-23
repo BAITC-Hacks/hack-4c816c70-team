@@ -19,8 +19,10 @@
     transform var(--duration-fast) var(--ease-standard);
 }
 
+/* Прозрачный outline остаётся видимым в режиме высокой контрастности, где тени отключены */
 .button:focus-visible {
-  outline: none;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
   box-shadow: var(--focus-ring);
 }
 

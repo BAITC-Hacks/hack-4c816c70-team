@@ -1,6 +1,88 @@
 # Отчёт Claude 1 — визуальная система и обзор города
 
-Статус: готово к интеграции. Commit не создавался: по договорённости git ведёт GPT-интегратор. Все файлы ниже пока не отслеживаются git (untracked).
+## Редизайн: интерфейсы для GPT (подключать сейчас)
+
+Все exports из `@/components/ui` и `@/features/city-overview`. Старые props не менялись, существующие потребители собираются.
+
+### 1. Тема и ранний скрипт в `app/layout.tsx`
+
+```tsx
+import { ThemeProvider, themeBootstrapScript } from "@/components/ui";
+import "@/styles/globals.css";
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
+  return (
+    <html lang="ru" suppressHydrationWarning className={manrope.variable}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+      </head>
+      <body>
+        <ThemeProvider>{/* SimulationProvider, AppShell… */}{children}</ThemeProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+- `themeBootstrapScript` до первой отрисовки ставит `data-theme` (`light`/`dark`/`paper`), `data-theme-preference` и `data-motion="ready"`. Поэтому нет вспышки неверной темы, а блоки Reveal скрываются только при работающем JS. `suppressHydrationWarning` на `<html>` обязателен, потому что атрибуты ставит скрипт.
+- Ключ хранения — `akim-theme`. «Системная» не хранится: запись удаляется, тема берётся из ОС.
+- `useTheme()` возвращает `{ preference, theme, setPreference }`, но нужен только если тема понадобится вне ThemeSwitcher.
+
+### 2. Шрифт
+
+`--font-sans` в `styles/tokens.css` уже ссылается на `var(--font-manrope)`. В `next/font/local` задайте `variable: "--font-manrope"` и повесьте `manrope.variable` на `<html>`. Начертания: 400, 600, 800. Без файла шрифта остаётся системный стек, из сети ничего не загружается.
+
+### 3. Шапка
+
+```tsx
+<AppHeader
+  title="Аким на 5 часов"
+  titleHref="/"
+  activeStepId={activeId /* "home" | "decisions" | "results" по pathname */}
+  steps={[
+    { id: "home", label: "Обзор", href: "/" },
+    { id: "decisions", label: "Решения", href: "/decisions" },
+    { id: "results", label: "Результат", href: "/results",
+      disabled: !hasResult, disabledReason: "Появится после оценки решений" },
+  ]}
+  end={<ThemeSwitcher />}
+/>
+```
+
+Новые необязательные поля: `steps[].href` (Next Link, `aria-current="page"`), `steps[].disabledReason` (видна при наведении и фокусе), `titleHref`. Старый режим `onStepSelect` работает. Шапка сама становится полупрозрачной с границей при прокрутке, высота не меняется. Индикатор активного пункта скользит.
+
+### 4. Главная `/`
+
+Готовый компонент для тонкого контейнера `HomePage`:
+
+```tsx
+import { CityHome } from "@/features/city-overview";
+
+<main className="page-enter">
+  <CityHome
+    scenario={scenario}                        // ScenarioVM | null
+    scenarioStatus={state.scenario.status}     // "loading" | "ready" | "error"
+    scenarioError={errorMessage ?? null}
+    onRetry={() => void loadScenario()}
+    selectedDistrictId={state.selectedDistrictId}
+    onSelectDistrict={(id) => dispatch({ type: "select-district", districtId: id })}
+    decisionsHref="/decisions"
+  />
+</main>
+```
+
+Внутри: первый экран «Пять решений. Один город.», CTA «Принять решения», бюджет, исходный Score и горизонт из API; «Как это работает»; районы со схемой и показателями; заключительный CTA. Всё с появлением при прокрутке. Вводный текст виден при загрузке и ошибке API, у сценарных данных — скелетон или ошибка с кнопкой повтора. `<main>` и `h1` не дублировать: `h1` внутри CityHome.
+
+### 5. Прочее
+
+- `Button asChild` переносит стиль кнопки на единственного ребёнка: `<Button size="lg" asChild><Link href="/decisions">…</Link></Button>`.
+- `Reveal` — `<Reveal as="section" index={0}>…</Reveal>`, один общий IntersectionObserver, срабатывает один раз.
+- `.page-enter` — глобальный класс короткого появления корня страницы (220 мс, reduced motion отключает).
+- `CityOverview` с прежними props остаётся экспортированным.
+
+---
+
+Статус: готово к интеграции, второй проход по общей странице выполнен (раздел в конце). Сам я commit не создавал: git ведёт GPT-интегратор. Первая версия модулей уже закоммичена им, исправления второго прохода — незакоммиченные изменения.
 
 ## Изменённые файлы (только своя область)
 
@@ -110,3 +192,59 @@ import "@/styles/globals.css";
 
 - При 768–1023 px подробности района стоят под атласом. После выбора на схеме их нужно прокручивать вниз, но live region сообщает выбранный район.
 - Районный Score в scenario не приходит. Если backend добавит `district.score`, он появится в подробностях автоматически. Раскраска атласа по баллу намеренно не делалась.
+
+## Проверка общей страницы (второй проход, только исправления)
+
+Как проверял: локальный C# API недоступен (на `localhost:8080` никто не слушает), поэтому общий `localhost:3000` показывает только ошибку загрузки. Полная копия текущего `frontend/` (все модули GPT и Claude 2 + мои) запускалась в scratchpad на `:3108`. Там был временный stub API на `:8097`: сценарий из `ScenarioData.cs` и ответ evaluate по примеру из `docs/api.md`, где у районов кроме Нуры значения не меняются. Для скриншотов шагов в копию `Simulator.tsx` добавлялся переход по `?step=`. Всё это только в копии: в репозиторий stub и эти правки не попадали, общий `:3000` и порт 8080 не затрагивались. Stub не заменяет проверку с настоящим API.
+
+### Исправлено (мои файлы)
+
+| Дефект | Где проявлялся | Исправление |
+| --- | --- | --- |
+| Значения «Бюджет / Горизонт / Критический порог» на разной высоте, когда подпись «Критический порог» переносится | 768 и 390 px | `heroMetric` — subgrid на три строки (подпись, значение, пояснение), `Metric` внутри — `display: contents` через класс `heroMetricBody`. На мобильном 2 колонки вместо 3. |
+| Подписи и метка «▼ N ниже 40» на схеме около 8–10 px | 390 px | Название 29 единиц, метка масштабируется целиком (`scale(1.4)`, текст не вылезает из рамки) |
+| Липкая шапка занимает около четверти экрана | Масштаб 200 % (720×450) | `@media (max-height: 520px)`: шапка `position: static`, `scroll-padding-top` уменьшен |
+| Нет индикатора фокуса у Button и карточек районов в режиме высокой контрастности Windows (`outline: none` + `box-shadow`) | forced-colors | `outline: 2px solid transparent` + прежний `box-shadow` |
+| Контур невыбранных областей схемы 1,75:1 при нужных 3:1 для границ элементов | Все ширины | Обводка `--color-muted` (5,25:1 к фону схемы) |
+
+Файлы: `components/ui/AppHeader.module.css`, `components/ui/Button.module.css`, `features/city-overview/CityOverview.tsx` (только `className` у Metric), `features/city-overview/city-overview.module.css`, `styles/globals.css`.
+
+### Результаты проверок
+
+| Проверка | Результат |
+| --- | --- |
+| 1440×900, 768×1024, 390×844 | Обзор без горизонтального скролла, скриншоты до и после исправления |
+| Масштаб 200 % (720×450, 320×640, около 200 px) | `scrollWidth == innerWidth`, элементов за правым краем нет |
+| Контраст текста, все пары токенов | Минимум 5,16:1 (muted на accent-soft), AA пройден |
+| Клавиатура в атласе и карточках | Проверено в первом проходе, после исправлений не менялось |
+| `npm run typecheck` | Успешно |
+| `eslint components features/city-overview` | 0 ошибок, 0 предупреждений |
+| `next build` полной копии с исправлениями | Успешно |
+
+Не проверено: реальное включение режима высокой контрастности Windows (исправление по известному поведению forced-colors), живой скринридер, `prefers-reduced-motion` в браузере (проверены только CSS-правила), сценарий с настоящим API.
+
+### Найдено вне моей области (не исправлял)
+
+| Владелец | Проблема |
+| --- | --- |
+| GPT, `features/simulator/Simulator.tsx` | Ни на одном шаге с данными нет `<main>`. После «Перейти к решениям» и после оценки фокус остаётся на `body`. На шаге «Решения» нет `h1` (Planner начинает с `h2`). Совпадает с P2 из отчёта архитектора. |
+| Claude 2 или GPT (по договорённости) | У корня Planner нулевые боковые поля (`padding: 0 0 88px`): на 1440 и 390 контент прижат к краям, «К обзору города» касается правого края. Нужны `max-width: var(--content-max)`, `margin-inline: auto`, `padding-inline: var(--page-gutter)`, как в обзоре. |
+| GPT, `features/results/` | Поля и ширина отличаются от обзора (24 px, без `max-width`). Кнопки свои, не `Button`. Районное сравнение — текст «50,00 → 52,96» без парных полос 0–100, которые описаны в `design.md`. |
+| GPT, `Simulator.tsx` | Кнопка «Повторить загрузку» — сырой `<button>`, можно взять `Button`. |
+
+## Редизайн: результат и проверки
+
+Готово (мои файлы): три темы в `styles/tokens.css` (имена токенов прежние), Manrope через `--font-manrope`; `ThemeProvider`, `ThemeSwitcher`, `Reveal`, `themeBootstrapScript`; `AppHeader` с `href`, `disabledReason`, `titleHref`, скользящим индикатором и фоном при прокрутке; `Button asChild`; `CityHome` (главная) и `DistrictExplorer`. GPT уже смонтировал всё это в `app/layout.tsx`, `AppShell` и `HomePage`.
+
+| Проверка | Результат |
+| --- | --- |
+| `tsc --noEmit` для всего проекта, `eslint components features/city-overview` | Успешно |
+| `next build` изолированной копии главной | Успешно |
+| Общий `:3000` с живым API | Главная загружает 52,56 / 100 / 8, три темы переключаются, горизонтального скролла нет на 1440 и 390 |
+| Появление при прокрутке (CDP, headless Edge) | Блоки ниже экрана скрыты и появляются при прокрутке; шапка получает фон после прокрутки и снимает его наверху |
+| Без JS | Все блоки видимы, тема по системе |
+| `prefers-reduced-motion` | Без сдвигов и анимации эскиза, все блоки сразу видимы |
+| 390, 320, 720×450 (масштаб 200 %), 768 | Горизонтального переполнения нет (подсказка у «Результата» исправлена) |
+| Контраст всех трёх тем | Текст ≥ 5,06:1, границы ≥ 3:1 |
+
+Не проверено: переходы между страницами и Back/Forward в общей сборке (прервано по времени), живой скринридер. На 320 px шапка в три строки (155 px). Шрифт Manrope ещё не подключён — сейчас системный стек.

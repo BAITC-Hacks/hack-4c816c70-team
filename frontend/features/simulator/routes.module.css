@@ -1,0 +1,36 @@
+.workspace {
+  min-width: 0;
+  padding-block: var(--space-6) var(--space-8);
+}
+
+.state {
+  width: min(100% - 2 * var(--page-gutter), var(--content-max));
+  margin-inline: auto;
+}
+
+.state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-4);
+  min-height: 55dvh;
+  align-content: center;
+  padding-block: var(--space-8);
+}
+
+.state h1 {
+  max-width: 20ch;
+  font-size: var(--text-3xl);
+}
+
+.state p {
+  max-width: var(--measure);
+  color: var(--color-muted);
+}
+
+.kicker {
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

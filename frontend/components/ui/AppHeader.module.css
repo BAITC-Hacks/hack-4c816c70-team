@@ -1,10 +1,27 @@
 .header {
   position: sticky;
   top: 0;
-  z-index: 20;
-  background: var(--color-ink);
-  color: var(--color-on-ink);
-  border-bottom: 1px solid rgb(244 245 239 / 0.08);
+  z-index: 30;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color var(--duration-slow) var(--ease-standard),
+    border-color var(--duration-slow) var(--ease-standard),
+    backdrop-filter var(--duration-slow) var(--ease-standard);
+}
+
+/* После прокрутки: полупрозрачный фон страницы и тонкая граница; высота не меняется */
+.header[data-scrolled] {
+  background: color-mix(in srgb, var(--color-canvas) 86%, transparent);
+  border-bottom-color: var(--color-border);
+  backdrop-filter: saturate(1.4) blur(12px);
+  -webkit-backdrop-filter: saturate(1.4) blur(12px);
+}
+
+@supports not (background: color-mix(in srgb, red 50%, transparent)) {
+  .header[data-scrolled] {
+    background: var(--color-canvas);
+  }
 }
 
 .inner {
@@ -22,21 +39,31 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
+  min-height: var(--control-height);
+  color: var(--color-ink);
   font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  letter-spacing: -0.01em;
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+  text-decoration: none;
   white-space: nowrap;
 }
 
-/* Метка пульта: квадрат с диагональным срезом, как узел схемы */
+a.title:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+/* Метка: квадрат со срезанным углом, как область на схеме районов */
 .mark {
   width: 14px;
   height: 14px;
-  background: var(--color-accent-soft);
+  background: var(--color-accent);
   clip-path: polygon(0 0, 70% 0, 100% 30%, 100% 100%, 0 100%);
 }
 
 .nav {
+  position: relative;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -50,6 +77,7 @@
 }
 
 .stepItem {
+  position: relative;
   min-width: 0;
 }
 
@@ -62,57 +90,129 @@
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-on-ink-muted);
+  color: var(--color-muted);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
+  text-decoration: none;
   white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-standard);
 }
 
-button.step:hover:not(:disabled) {
-  background: rgb(244 245 239 / 0.08);
-  color: var(--color-on-ink);
+a.step:hover,
+button.step:hover {
+  color: var(--color-ink);
 }
 
-button.step:focus-visible {
-  outline: 2px solid var(--color-accent-soft);
-  outline-offset: 2px;
-}
-
-.step:disabled {
-  opacity: 0.5;
+.step:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
 .stepIndex {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 1px solid rgb(244 245 239 / 0.3);
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border-strong);
   border-radius: 50%;
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--duration-slow) var(--ease-standard),
+    border-color var(--duration-slow) var(--ease-standard),
+    color var(--duration-slow) var(--ease-standard);
 }
 
 .active {
-  color: var(--color-on-ink);
+  color: var(--color-ink);
 }
 
 .active .stepIndex {
-  background: var(--color-accent-soft);
-  border-color: var(--color-accent-soft);
-  color: var(--color-ink);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-ink);
   font-weight: var(--weight-bold);
+}
+
+.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Причина недоступности видна при наведении и фокусе с клавиатуры */
+.reason {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 1;
+  width: max-content;
+  max-width: min(260px, 70vw);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+  color: var(--color-ink);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2px);
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard),
+    visibility 0s linear var(--duration-fast);
+}
+
+/* У последнего пункта подсказка открывается влево, чтобы не выходить за край */
+.stepItem:last-child .reason {
+  left: auto;
+  right: 0;
+}
+
+.stepItem:hover .reason,
+.disabled:focus-visible + .reason {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+/* Скользящая линия под активным пунктом */
+.indicator {
+  position: absolute;
+  left: 0;
+  bottom: -9px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
+.indicatorAnimated {
+  transition:
+    transform var(--duration-slow) var(--ease-out),
+    width var(--duration-slow) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-standard);
 }
 
 .end {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  margin-left: auto;
 }
 
 @media (max-width: 767px) {
   .inner {
-    padding-block: var(--space-2);
+    column-gap: var(--space-3);
+    padding-bottom: 0;
+  }
+
+  .title {
+    font-size: var(--text-md);
+    gap: var(--space-2);
   }
 
   .nav {
@@ -127,10 +227,14 @@ button.step:focus-visible {
   .step {
     padding: 0 var(--space-2);
   }
+
+  .indicator {
+    bottom: -8px;
+  }
 }
 
 @media (max-width: 420px) {
-  /* На узком экране у неактивных шагов остаётся номер, подпись видна у текущего */
+  /* У неактивных пунктов остаётся номер; подпись доступна скринридеру */
   .step:not(.active) .stepLabel {
     position: absolute;
     width: 1px;
@@ -138,5 +242,12 @@ button.step:focus-visible {
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
+  }
+}
+
+/* Невысокое окно (масштаб 200 %, ландшафт телефона): шапка не занимает экран */
+@media (max-height: 520px) {
+  .header {
+    position: static;
   }
 }

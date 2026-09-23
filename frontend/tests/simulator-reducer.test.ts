@@ -19,11 +19,10 @@ test("late evaluation response after reset is ignored", () => {
   assert.deepEqual(late.choices, []);
 });
 
-test("pending evaluation locks choice changes and only matching response advances to results", () => {
+test("pending evaluation locks choice changes and only matching response is accepted", () => {
   let state = simulatorReducer(initialSimulatorState, { type: "scenario-ready", scenario });
   state = simulatorReducer(state, { type: "evaluate-start", requestId: 4, submittedChoices: [] });
   assert.equal(simulatorReducer(state, { type: "set-choices", choices: [{ measureId: "M7" }] }), state);
   const complete = simulatorReducer(state, { type: "evaluate-success", requestId: 4, revision: 0, result });
-  assert.equal(complete.step, "results");
   assert.equal(complete.evaluation.status, "success");
 });

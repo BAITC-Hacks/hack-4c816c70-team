@@ -1,5 +1,5 @@
-import { Simulator } from "@/features/simulator/Simulator";
+import { HomePage } from "@/features/simulator/HomePage";
 
 export default function Home() {
-  return <Simulator />;
+  return <HomePage />;
 }

@@ -12,6 +12,7 @@ import type {
   PlannerProps,
 } from "@/lib/contracts/ui";
 import { Button } from "@/components/ui";
+import { BudgetRibbon, type RibbonSegment } from "./BudgetRibbon";
 import { DecisionTray } from "./DecisionTray";
 import { CATEGORY_LABELS, CATEGORY_ORDER, formatUnits } from "./labels";
 import { MeasureCard } from "./MeasureCard";
@@ -29,6 +30,22 @@ import {
 import styles from "./planner.module.css";
 
 type CategoryFilter = CategoryId | "all";
+
+/** Район для новой карточки: выбранный вручную, иначе район из обзора, если он без конфликта. */
+function resolvePendingDistrict(
+  scenario: PlannerProps["scenario"],
+  choices: readonly ChoiceDraft[],
+  pendingDistricts: Readonly<Record<MeasureId, DistrictId | "">>,
+  preferredDistrictId: DistrictId | undefined,
+  measure: MeasureVM,
+): DistrictId | "" {
+  const local = pendingDistricts[measure.id];
+  if (local !== undefined) return local;
+  if (preferredDistrictId === undefined || measure.scope === "city") return "";
+  return getDistrictConflicts(scenario, choices, measure.id, preferredDistrictId).length === 0
+    ? preferredDistrictId
+    : "";
+}
 
 /**
  * Конструктор пяти решений. choices принадлежат родителю: любое изменение
@@ -53,6 +70,10 @@ export function Planner({
   const trayHeadingRef = useRef<HTMLHeadingElement>(null);
   const trayToggleRef = useRef<HTMLButtonElement>(null);
 
+  const rules = scenario.rules;
+  const requiredChoices = rules?.requiredChoices ?? null;
+  const preferredDistrict = scenario.districts.find((district) => district.id === preferredDistrictId);
+
   const measureById = useMemo(() => indexMeasures(scenario), [scenario]);
   const indicatorNames = useMemo(
     () => new Map<IndicatorId, string>(scenario.indicators.map((indicator) => [indicator.id, indicator.name])),
@@ -60,38 +81,60 @@ export function Planner({
   );
   const validation = useMemo(() => validateDraft(scenario, choices), [scenario, choices]);
   const potentialSynergies = useMemo(() => getPotentialSynergies(scenario, choices), [scenario, choices]);
+  const segments = useMemo<RibbonSegment[]>(
+    () =>
+      choices.flatMap((choice) => {
+        const measure = measureById.get(choice.measureId);
+        return measure ? [{ measureId: measure.id, cost: measure.cost }] : [];
+      }),
+    [choices, measureById],
+  );
+  const synergyPartners = useMemo(() => {
+    const partners = new Map<MeasureId, MeasureId[]>();
+    for (const { measureIds: [a, b] } of rules?.synergies ?? []) {
+      partners.set(a, [...(partners.get(a) ?? []), b]);
+      partners.set(b, [...(partners.get(b) ?? []), a]);
+    }
+    return partners;
+  }, [rules]);
+  const selectedPerCategory = useMemo(() => {
+    const counts = new Map<CategoryId, number>();
+    for (const choice of choices) {
+      const category = measureById.get(choice.measureId)?.category;
+      if (category) counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+    return counts;
+  }, [choices, measureById]);
 
-  const rules = scenario.rules;
-  const requiredChoices = rules?.requiredChoices ?? null;
-  const preferredDistrict = scenario.districts.find((district) => district.id === preferredDistrictId);
-  const visibleMeasures =
-    filter === "all" ? scenario.measures : scenario.measures.filter((measure) => measure.category === filter);
-  const choiceById = new Map(choices.map((choice) => [choice.measureId, choice]));
-  const selectedPerCategory = new Map<CategoryId, number>();
-  for (const choice of choices) {
-    const category = measureById.get(choice.measureId)?.category;
-    if (category) selectedPerCategory.set(category, (selectedPerCategory.get(category) ?? 0) + 1);
-  }
-
-  const canEdit = !isEvaluating;
-  const districtOptionsFor = (measureId: MeasureId) => getDistrictOptions(scenario, choices, measureId);
-
-  /** Район по умолчанию для новой карточки: выбранный в атласе, если он не конфликтует. */
-  function pendingDistrictFor(measure: MeasureVM): DistrictId | "" {
-    const local = pendingDistricts[measure.id];
-    if (local !== undefined) return local;
-    if (!preferredDistrict) return "";
-    return getDistrictConflicts(scenario, choices, measure.id, preferredDistrict.id).length === 0
-      ? preferredDistrict.id
-      : "";
-  }
+  const preferredId = preferredDistrict?.id;
+  // Всё, что карточке нужно для отрисовки, считается один раз на изменение набора.
+  const cards = useMemo(
+    () =>
+      scenario.measures.map((measure) => {
+        const pendingDistrictId = resolvePendingDistrict(scenario, choices, pendingDistricts, preferredId, measure);
+        const availability = getAddAvailability(scenario, choices, measure.id, pendingDistrictId);
+        const blockedBeyondDistrict =
+          availability.status === "blocked" &&
+          getAddAvailability(scenario, choices, measure.id).status === "blocked";
+        return {
+          measure,
+          pendingDistrictId,
+          availability,
+          choice: choices.find((choice) => choice.measureId === measure.id),
+          showDistrictChoice: !blockedBeyondDistrict,
+          districtOptions: getDistrictOptions(scenario, choices, measure.id),
+        };
+      }),
+    [scenario, choices, pendingDistricts, preferredId],
+  );
+  const visibleCards = filter === "all" ? cards : cards.filter((card) => card.measure.category === filter);
 
   function commit(next: readonly ChoiceDraft[]) {
-    if (canEdit && next !== choices) onChoicesChange(next);
+    if (!isEvaluating && next !== choices) onChoicesChange(next);
   }
 
   function handleAdd(measure: MeasureVM) {
-    const districtId = pendingDistrictFor(measure);
+    const districtId = resolvePendingDistrict(scenario, choices, pendingDistricts, preferredId, measure);
     if (getAddAvailability(scenario, choices, measure.id, districtId).status !== "available") return;
     commit(addChoice(choices, measure, districtId));
     setPendingDistricts((current) => {
@@ -121,6 +164,8 @@ export function Planner({
     trayToggleRef.current?.focus();
   }
 
+  const isOverBudget = validation.provisionalRemaining < 0;
+
   return (
     <section
       className={styles.planner}
@@ -131,25 +176,25 @@ export function Planner({
       }}
     >
       <header className={styles.plannerHeader}>
-        <div>
-          <h2 id={`${trayId}-title`} className={styles.plannerTitle}>
+        <div className={styles.intro}>
+          <h1 id={`${trayId}-title`} className={styles.plannerTitle}>
             {requiredChoices !== null ? `Выберите ${requiredChoices} решений` : "Каталог решений"}
-          </h2>
-          <p className={styles.textMuted}>
-            Бюджет {formatUnits(scenario.budget)} ед., горизонт {formatUnits(scenario.horizonQuarters)} кв.
+          </h1>
+          <p className={styles.lede}>
+            Бюджет {formatUnits(scenario.budget)} ед. на {formatUnits(scenario.horizonQuarters)} кварталов.
             {rules ? ` Не больше ${rules.maxPerCategory} мер одного направления.` : null}
           </p>
         </div>
-        <Button variant="secondary" onClick={onBack} disabled={isEvaluating}>
-          <span aria-hidden="true">←</span>К обзору города
+        <Button variant="ghost" onClick={onBack} disabled={isEvaluating}>
+          К обзору города
         </Button>
       </header>
 
       {rules === null ? (
         <p className={styles.rulesMissing} role="status">
           <span aria-hidden="true">! </span>
-          Правила выбора ещё не получены от сервера. Каталог можно просмотреть, но добавление мер и оценка
-          недоступны.
+          Правила выбора ещё не получены от сервера. Каталог можно просмотреть, но добавить меры и оценить план
+          нельзя.
         </p>
       ) : null}
 
@@ -170,81 +215,83 @@ export function Planner({
                 aria-pressed={filter === "all"}
                 onClick={() => setFilter("all")}
               >
-                Все направления
+                Все
               </button>
-              {CATEGORY_ORDER.map((category) => {
-                const selected = selectedPerCategory.get(category) ?? 0;
-                return (
-                  <button
-                    key={category}
-                    type="button"
-                    className={styles.chip}
-                    aria-pressed={filter === category}
-                    onClick={() => setFilter(category)}
-                  >
-                    {CATEGORY_LABELS[category]}
-                    {rules ? (
-                      <span className={styles.chipCount}>
-                        {" "}
-                        {selected}/{rules.maxPerCategory}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
+              {CATEGORY_ORDER.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className={styles.chip}
+                  aria-pressed={filter === category}
+                  onClick={() => setFilter(category)}
+                >
+                  {CATEGORY_LABELS[category]}
+                  {rules ? (
+                    <span className={styles.chipCount}>
+                      {selectedPerCategory.get(category) ?? 0}/{rules.maxPerCategory}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
             </div>
 
             {preferredDistrict ? (
               <p className={styles.textMuted}>
-                Район из обзора — {preferredDistrict.name} — предложен для новых мер. Назначение можно изменить в
-                каждой карточке.
+                Район {preferredDistrict.name} из обзора предложен для новых мер. Его можно сменить в карточке.
               </p>
             ) : null}
 
-            {visibleMeasures.length > 0 ? (
+            {visibleCards.length > 0 ? (
               <ul className={styles.cards}>
-                {visibleMeasures.map((measure) => (
-                  <li key={measure.id}>
+                {visibleCards.map((card) => (
+                  <li key={card.measure.id}>
                     <MeasureCard
-                      measure={measure}
+                      measure={card.measure}
+                      budget={scenario.budget}
                       indicatorNames={indicatorNames}
-                      choice={choiceById.get(measure.id)}
-                      availability={getAddAvailability(scenario, choices, measure.id, pendingDistrictFor(measure))}
-                      districtOptions={districtOptionsFor(measure.id)}
-                      pendingDistrictId={pendingDistrictFor(measure)}
+                      choice={card.choice}
+                      availability={card.availability}
+                      showDistrictChoice={card.showDistrictChoice}
+                      districtOptions={card.districtOptions}
+                      pendingDistrictId={card.pendingDistrictId}
+                      synergyPartners={synergyPartners.get(card.measure.id) ?? []}
                       onPendingDistrictChange={(districtId) =>
-                        setPendingDistricts((current) => ({ ...current, [measure.id]: districtId }))
+                        setPendingDistricts((current) => ({ ...current, [card.measure.id]: districtId }))
                       }
-                      onAdd={() => handleAdd(measure)}
-                      onRemove={() => commit(removeChoice(choices, measure.id))}
-                      onDistrictChange={(districtId) => commit(setChoiceDistrict(choices, measure, districtId))}
+                      onAdd={() => handleAdd(card.measure)}
+                      onRemove={() => commit(removeChoice(choices, card.measure.id))}
+                      onDistrictChange={(districtId) => commit(setChoiceDistrict(choices, card.measure, districtId))}
                     />
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className={styles.empty}>В этом направлении нет мер в каталоге.</p>
+              <p className={styles.empty}>В этом направлении в каталоге нет мер. Выберите другое направление.</p>
             )}
           </div>
 
-          <DecisionTray
-            id={trayId}
-            budget={scenario.budget}
-            requiredChoices={requiredChoices}
-            choices={choices}
-            measureById={measureById}
-            districtOptionsFor={districtOptionsFor}
-            validation={validation}
-            potentialSynergies={potentialSynergies}
-            isEvaluating={isEvaluating}
-            serverError={serverError}
-            summaryRef={summaryRef}
-            headingRef={trayHeadingRef}
-            onRemove={(measureId) => commit(removeChoice(choices, measureId))}
-            onDistrictChange={(measure, districtId) => commit(setChoiceDistrict(choices, measure, districtId))}
-            onEvaluate={handleEvaluate}
-            onClose={closeTray}
-          />
+          <div className={styles.trayColumn}>
+            <div className={styles.scrim} aria-hidden="true" onClick={closeTray} />
+            <DecisionTray
+              id={trayId}
+              budget={scenario.budget}
+              requiredChoices={requiredChoices}
+              choices={choices}
+              measureById={measureById}
+              segments={segments}
+              districtOptionsFor={(measureId) => getDistrictOptions(scenario, choices, measureId)}
+              validation={validation}
+              potentialSynergies={potentialSynergies}
+              isEvaluating={isEvaluating}
+              serverError={serverError}
+              summaryRef={summaryRef}
+              headingRef={trayHeadingRef}
+              onRemove={(measureId) => commit(removeChoice(choices, measureId))}
+              onDistrictChange={(measure, districtId) => commit(setChoiceDistrict(choices, measure, districtId))}
+              onEvaluate={handleEvaluate}
+              onClose={closeTray}
+            />
+          </div>
         </div>
 
         <div className={styles.mobileBar}>
@@ -256,15 +303,18 @@ export function Planner({
             aria-controls={trayId}
             onClick={() => (isTrayOpen ? closeTray() : openTray())}
           >
-            <strong>
-              {choices.length} из {requiredChoices ?? "—"}
-            </strong>
-            <span>
-              {validation.provisionalRemaining < 0
-                ? `✕ превышение ${formatUnits(-validation.provisionalRemaining)} ед.`
-                : `остаток ${formatUnits(validation.provisionalRemaining)} ед.`}
+            <span className={styles.mobileLine}>
+              <strong>
+                {choices.length} из {requiredChoices ?? "—"}
+              </strong>
+              <span data-over={isOverBudget}>
+                {isOverBudget
+                  ? `✕ превышение ${formatUnits(-validation.provisionalRemaining)} ед.`
+                  : `остаток ${formatUnits(validation.provisionalRemaining)} ед.`}
+              </span>
+              <span className={styles.mobileToggle}>{isTrayOpen ? "Свернуть" : "План"}</span>
             </span>
-            <span className={styles.mobileToggle}>{isTrayOpen ? "Свернуть" : "Решения"}</span>
+            <BudgetRibbon budget={scenario.budget} segments={segments} className={styles.ribbonThin} />
           </button>
           <Button
             className={styles.evaluateCompact}

@@ -1,33 +1,24 @@
-/* Planner: только общие CSS variables из styles/tokens.css. Фоллбэки — значения design.md. */
+/*
+ * Planner. Только семантические tokens из styles/tokens.css: темы Claude 1
+ * переопределяют те же имена. Фоллбэки нужны, если tokens ещё не подключены.
+ * Главный элемент экрана — лента бюджета в панели плана.
+ */
 
 .planner {
-  --mobile-bar-height: 72px;
+  --mobile-bar-height: 76px;
+  --tray-width: 360px;
+  --sticky-top: calc(var(--header-height, 64px) + var(--space-5, 24px));
+
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: var(--space-6, 32px) clamp(16px, 3vw, 40px) var(--space-7, 48px);
   display: grid;
-  gap: var(--space-4, 16px);
+  gap: var(--space-5, 24px);
   color: var(--color-ink, #142d38);
-  font-family: var(--font-sans, "Segoe UI", Arial, sans-serif);
+  font-family: var(--font-sans, system-ui, sans-serif);
   font-size: var(--text-md, 1rem);
   line-height: var(--leading-body, 1.5);
-  min-width: 0;
-}
-
-.plannerHeader {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3, 12px);
-}
-
-.plannerTitle {
-  margin: 0;
-  font-size: var(--text-2xl, 1.75rem);
-  line-height: var(--leading-tight, 1.15);
-}
-
-.plannerHeader p,
-.catalog > p {
-  margin: var(--space-1, 4px) 0 0;
 }
 
 .srOnly {
@@ -42,6 +33,36 @@
   border: 0;
 }
 
+/* ---------- Заголовок ---------- */
+
+.plannerHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3, 12px) var(--space-5, 24px);
+}
+
+.intro {
+  display: grid;
+  gap: var(--space-2, 8px);
+  max-width: 44rem;
+}
+
+.plannerTitle {
+  margin: 0;
+  font-size: clamp(2rem, 1.35rem + 1.9vw, 2.75rem);
+  font-weight: var(--weight-bold, 700);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  margin: 0;
+  color: var(--color-muted, #536671);
+  font-size: var(--text-md, 1rem);
+}
+
 .lock {
   margin: 0;
   padding: 0;
@@ -51,8 +72,8 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
-  gap: var(--space-5, 24px);
+  grid-template-columns: minmax(0, 1fr) var(--tray-width);
+  gap: var(--space-6, 32px) clamp(24px, 3vw, 40px);
   align-items: start;
 }
 
@@ -64,23 +85,24 @@
 
 /* ---------- Текстовые состояния: цвет всегда вместе со знаком ---------- */
 
-.textMuted {
+.textMuted,
+.textWarning,
+.textDanger {
   margin: 0;
-  color: var(--color-muted, #536671);
   font-size: var(--text-sm, 0.875rem);
 }
 
+.textMuted {
+  color: var(--color-muted, #536671);
+}
+
 .textWarning {
-  margin: 0;
   color: var(--color-warning, #8a4b08);
-  font-size: var(--text-sm, 0.875rem);
   font-weight: var(--weight-medium, 500);
 }
 
 .textDanger {
-  margin: 0;
   color: var(--color-danger, #b42332);
-  font-size: var(--text-sm, 0.875rem);
   font-weight: var(--weight-medium, 500);
 }
 
@@ -95,66 +117,60 @@
 
 .empty {
   margin: 0;
-  padding: var(--space-5, 24px);
+  padding: var(--space-6, 32px) var(--space-4, 16px);
   border: 1px dashed var(--color-border-strong, #b8c7c0);
-  border-radius: var(--radius-panel, 20px);
+  border-radius: var(--radius-md, 12px);
   color: var(--color-muted, #536671);
   text-align: center;
 }
 
-/* ---------- Кнопки: основа — Button из components/ui ---------- */
-
-.chip,
-.mobileSummary,
-.buttonLink {
-  font: inherit;
-  min-height: var(--control-height, 44px);
-  border-radius: var(--radius-sm, 8px);
-  cursor: pointer;
-  transition: background-color var(--duration-fast, 160ms) var(--ease-standard, ease);
-}
-
-.chip:focus-visible,
-.mobileSummary:focus-visible,
-.buttonLink:focus-visible,
-.select:focus-visible,
 .summary:focus-visible,
-.trayTitle:focus-visible {
-  outline: none;
+.trayTitle:focus-visible,
+.chip:focus-visible,
+.moreToggle:focus-visible,
+.slotRemove:focus-visible,
+.mobileSummary:focus-visible,
+.select:focus-visible {
+  outline: 2px solid transparent;
   box-shadow: var(--focus-ring, 0 0 0 3px #fff, 0 0 0 5px #006b60);
 }
 
-.buttonLink {
-  justify-self: start;
-  padding: 0 var(--space-2, 8px);
-  border: 0;
-  background: transparent;
-  color: var(--color-danger, #b42332);
-  font-weight: var(--weight-medium, 500);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.chip:disabled,
-.buttonLink:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-/* ---------- Фильтры ---------- */
+/* ---------- Фильтры направлений ---------- */
 
 .filters {
+  position: sticky;
+  z-index: 5;
+  top: var(--header-height, 64px);
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2, 8px);
+  margin-inline: -4px;
+  padding: var(--space-2, 8px) 4px;
+  background: var(--color-canvas, #f4f5ef);
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  min-height: 40px;
   padding: 0 var(--space-4, 16px);
-  border: 1px solid var(--color-border-strong, #b8c7c0);
+  border: 1px solid var(--color-border, #d7e1dc);
   border-radius: var(--radius-pill, 999px);
   background: var(--color-surface, #fff);
   color: var(--color-ink, #142d38);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--weight-medium, 500);
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--ease-standard, ease),
+    border-color 160ms var(--ease-standard, ease),
+    color 160ms var(--ease-standard, ease);
+}
+
+.chip:hover {
+  border-color: var(--color-border-strong, #b8c7c0);
 }
 
 .chip[aria-pressed="true"] {
@@ -165,15 +181,20 @@
 
 .chipCount {
   font-variant-numeric: tabular-nums;
-  opacity: 0.8;
+  opacity: 0.72;
+}
+
+.chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 /* ---------- Карточки мер ---------- */
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-  gap: var(--space-4, 16px);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
+  gap: var(--space-3, 12px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -191,22 +212,115 @@
   width: 100%;
   padding: var(--space-4, 16px);
   border: 1px solid var(--color-border, #d7e1dc);
-  border-radius: var(--radius-panel, 20px);
+  border-radius: var(--radius-md, 12px);
   background: var(--color-surface, #fff);
-  box-shadow: var(--shadow-panel, none);
+  transition:
+    border-color 160ms var(--ease-standard, ease),
+    box-shadow 200ms var(--ease-standard, ease),
+    background-color 200ms var(--ease-standard, ease);
+}
+
+.card:hover,
+.card:focus-within {
+  border-color: var(--color-border-strong, #b8c7c0);
 }
 
 .card[data-state="selected"] {
-  border: 2px solid var(--color-accent, #006b60);
-  background: linear-gradient(var(--color-accent-soft, #ddf3ec), var(--color-surface, #fff) 96px);
+  border-color: var(--color-accent, #006b60);
+  box-shadow: inset 0 0 0 1px var(--color-accent, #006b60);
+  background: color-mix(in srgb, var(--color-accent-soft, #ddf3ec) 55%, var(--color-surface, #fff));
 }
 
 .card[data-state="blocked"] {
   background: var(--color-surface-sunken, #eef1ea);
-  box-shadow: none;
 }
 
-.cardHeader {
+.cardTop {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3, 12px);
+}
+
+.measureId {
+  display: inline-block;
+  min-width: 2.75em;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-strong, #b8c7c0);
+  border-radius: 6px;
+  color: var(--color-ink-soft, #1f3f4c);
+  font-size: var(--text-xs, 0.8125rem);
+  font-weight: var(--weight-bold, 700);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--text-md, 1rem);
+  font-weight: var(--weight-semibold, 600);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.cardCost {
+  margin: 0;
+  color: var(--color-muted, #536671);
+  font-size: var(--text-sm, 0.875rem);
+  white-space: nowrap;
+}
+
+.cardCost strong {
+  color: var(--color-ink, #142d38);
+  font-size: var(--text-xl, 1.375rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Доля цены в бюджете — та же шкала, что у ленты в плане. */
+.costTrack {
+  height: 3px;
+  overflow: hidden;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-border, #d7e1dc);
+}
+
+.costTrack span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent, #006b60);
+  transform-origin: left center;
+}
+
+.card[data-state="blocked"] .costTrack span {
+  background: var(--color-muted, #536671);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1, 4px) var(--space-4, 16px);
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.facts > div {
+  display: flex;
+  gap: 6px;
+}
+
+.facts dt {
+  color: var(--color-muted, #536671);
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: var(--weight-medium, 500);
+  font-variant-numeric: tabular-nums;
+}
+
+.effectRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -214,74 +328,88 @@
   gap: var(--space-2, 8px);
 }
 
-.cardMeta {
-  margin: 0;
-  color: var(--color-muted, #536671);
-  font-size: var(--text-xs, 0.8125rem);
-  font-weight: var(--weight-semibold, 600);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-.measureId {
-  font-variant-numeric: tabular-nums;
-  color: var(--color-ink, #142d38);
-}
-
-.selectedMark {
-  margin: 0;
-  padding: 2px var(--space-2, 8px);
-  border-radius: var(--radius-pill, 999px);
-  background: var(--color-accent, #006b60);
-  color: var(--color-accent-ink, #fff);
-  font-size: var(--text-xs, 0.8125rem);
-  font-weight: var(--weight-semibold, 600);
-}
-
-.cardTitle {
-  margin: 0;
-  font-size: var(--text-lg, 1.125rem);
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-
-.facts {
+.effectChips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2, 8px) var(--space-5, 24px);
+  gap: 6px;
   margin: 0;
-}
-
-.facts > div {
-  display: grid;
-}
-
-.facts dt {
-  color: var(--color-muted, #536671);
+  padding: 0;
+  list-style: none;
   font-size: var(--text-xs, 0.8125rem);
 }
 
-.facts dd {
-  margin: 0;
-  font-weight: var(--weight-semibold, 600);
+.effectChips li {
+  padding: 2px var(--space-2, 8px);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-accent-soft, #ddf3ec);
   font-variant-numeric: tabular-nums;
 }
 
-.effects {
-  display: grid;
-  gap: var(--space-1, 4px);
+.effectChips li[data-sign="negative"],
+.effectList li[data-sign="negative"] {
+  background: var(--color-danger-soft, #fbe9eb);
+  color: var(--color-danger, #b42332);
 }
 
-.effectsCaption {
-  margin: 0;
-  color: var(--color-muted, #536671);
-  font-size: var(--text-xs, 0.8125rem);
+.moreToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin-left: auto;
+  padding: 0 var(--space-2, 8px);
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  background: transparent;
+  color: var(--color-accent, #006b60);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--weight-semibold, 600);
+  cursor: pointer;
+}
+
+.moreToggle:hover {
+  background: var(--color-surface-sunken, #eef1ea);
+}
+
+.chevron {
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 180ms var(--ease-standard, ease);
+}
+
+.moreToggle[aria-expanded="true"] .chevron {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+/* Раскрытие через grid-rows: высота анимируется без измерений в JS. */
+.details {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms var(--ease-standard, ease);
+}
+
+.details[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.detailsInner {
+  display: grid;
+  gap: var(--space-2, 8px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.details[data-open="true"] .detailsInner {
+  padding-top: var(--space-1, 4px);
 }
 
 .effectList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1, 4px) var(--space-2, 8px);
+  display: grid;
+  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -289,31 +417,149 @@
 }
 
 .effectList li {
-  padding: 2px var(--space-2, 8px);
-  border-radius: var(--radius-sm, 8px);
-  background: var(--color-accent-soft, #ddf3ec);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  padding: 4px var(--space-2, 8px);
+  border-radius: 6px;
 }
 
-.effectList li[data-sign="negative"] {
+.effectList strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------- Выбор района в карточке ---------- */
+
+.districts {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.districtsLegend {
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--color-muted, #536671);
+  font-size: var(--text-xs, 0.8125rem);
+  font-weight: var(--weight-semibold, 600);
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pill {
+  position: relative;
+  display: inline-flex;
+}
+
+.pillInput {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pillInput:disabled {
+  cursor: not-allowed;
+}
+
+.pillText {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 var(--space-3, 12px);
+  border: 1px solid var(--color-border-strong, #b8c7c0);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-surface, #fff);
+  font-size: var(--text-sm, 0.875rem);
+  white-space: nowrap;
+  transition:
+    background-color 180ms var(--ease-standard, ease),
+    border-color 180ms var(--ease-standard, ease),
+    color 180ms var(--ease-standard, ease);
+}
+
+.pillInput:hover:not(:disabled) + .pillText {
+  border-color: var(--color-ink, #142d38);
+}
+
+.pillInput:checked + .pillText {
+  border-color: var(--color-accent, #006b60);
+  background: var(--color-accent, #006b60);
+  color: var(--color-accent-ink, #fff);
+  font-weight: var(--weight-semibold, 600);
+}
+
+.pillInput:focus-visible + .pillText {
+  box-shadow: var(--focus-ring, 0 0 0 3px #fff, 0 0 0 5px #006b60);
+}
+
+.pillInput:disabled + .pillText {
+  border-style: dashed;
+  background: transparent;
+  color: var(--color-muted, #536671);
+  text-decoration: line-through;
+}
+
+.pill[data-conflict="true"] .pillInput:checked + .pillText {
+  border-color: var(--color-danger, #b42332);
   background: var(--color-danger-soft, #fbe9eb);
   color: var(--color-danger, #b42332);
 }
 
-.effectValue {
-  font-weight: var(--weight-bold, 700);
-  font-variant-numeric: tabular-nums;
-}
-
-.cityNote {
-  margin: 0;
-  color: var(--color-muted, #536671);
-  font-size: var(--text-sm, 0.875rem);
-}
+/* ---------- Действие карточки ---------- */
 
 .cardActions {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-2, 8px);
   margin-top: auto;
+  padding-top: var(--space-1, 4px);
+}
+
+.cardActions > button:only-child {
+  width: 100%;
+}
+
+.selectedMark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  margin: 0;
+  color: var(--color-accent, #006b60);
+  font-weight: var(--weight-semibold, 600);
+}
+
+.check {
+  position: relative;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-accent, #006b60);
+  animation: pop 240ms var(--ease-standard, ease) both;
+}
+
+.check::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 4px;
+  width: 5px;
+  height: 9px;
+  border-right: 2px solid var(--color-accent-ink, #fff);
+  border-bottom: 2px solid var(--color-accent-ink, #fff);
+  transform: rotate(45deg);
 }
 
 .reasons {
@@ -326,61 +572,27 @@
   font-size: var(--text-sm, 0.875rem);
 }
 
-/* ---------- Выбор района ---------- */
+/* ---------- Панель плана ---------- */
 
-.picker {
-  display: grid;
-  gap: var(--space-1, 4px);
+.trayColumn {
+  position: sticky;
+  top: var(--sticky-top);
+  min-width: 0;
 }
 
-.pickerLabel {
-  font-size: var(--text-sm, 0.875rem);
-  font-weight: var(--weight-semibold, 600);
-}
-
-.select {
-  width: 100%;
-  min-height: var(--control-height, 44px);
-  padding: 0 var(--space-3, 12px);
-  border: 1px solid var(--color-border-strong, #b8c7c0);
-  border-radius: var(--radius-sm, 8px);
-  background: var(--color-surface, #fff);
-  color: var(--color-ink, #142d38);
-  font: inherit;
-}
-
-.select[aria-invalid="true"] {
-  border-color: var(--color-warning, #8a4b08);
-}
-
-.select:disabled {
-  background: var(--color-surface-sunken, #eef1ea);
-  color: var(--color-muted, #536671);
-}
-
-.pickerHint {
-  display: grid;
-  gap: 2px;
-}
-
-.pickerHint:empty {
+.scrim {
   display: none;
 }
 
-/* ---------- Панель решений ---------- */
-
 .tray {
-  position: sticky;
-  top: var(--space-4, 16px);
   display: grid;
-  gap: var(--space-4, 16px);
-  max-height: calc(100dvh - 2 * var(--space-4, 16px));
+  gap: var(--space-5, 24px);
+  max-height: calc(100dvh - var(--sticky-top) - var(--space-5, 24px));
   overflow: auto;
   padding: var(--space-5, 24px);
   border: 1px solid var(--color-border, #d7e1dc);
   border-radius: var(--radius-panel, 20px);
   background: var(--color-surface, #fff);
-  box-shadow: var(--shadow-panel, none);
   overscroll-behavior: contain;
 }
 
@@ -392,16 +604,22 @@
 
 .trayTitle {
   margin: 0;
-  font-size: var(--text-xl, 1.375rem);
-  line-height: var(--leading-tight, 1.15);
   border-radius: 4px;
+  font-size: var(--text-xl, 1.375rem);
+  font-weight: var(--weight-bold, 700);
+  letter-spacing: -0.01em;
 }
 
 .counter {
   margin: 0 0 0 auto;
-  font-size: var(--text-xl, 1.375rem);
-  font-weight: var(--weight-bold, 700);
+  color: var(--color-muted, #536671);
   font-variant-numeric: tabular-nums;
+}
+
+.counter strong {
+  color: var(--color-ink, #142d38);
+  font-size: var(--text-2xl, 1.75rem);
+  line-height: 1;
 }
 
 .trayClose {
@@ -410,46 +628,113 @@
 
 .budget {
   display: grid;
-  gap: var(--space-2, 8px);
-  padding: var(--space-4, 16px);
-  border-radius: var(--radius-md, 12px);
+  gap: var(--space-3, 12px);
+}
+
+/* Лента бюджета: доля каждой меры пропорциональна цене из каталога. */
+.ribbon {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--radius-sm, 8px);
   background: var(--color-surface-sunken, #eef1ea);
 }
 
-.budgetRow {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3, 12px);
-  font-size: var(--text-sm, 0.875rem);
+.ribbonSegment {
+  display: grid;
+  place-items: center;
+  flex-basis: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-accent, #006b60);
+  color: var(--color-accent-ink, #fff);
+  /* Ширина сразу финальная: анимация не прячет долю, а только отмечает новую меру. */
+  animation: segIn 280ms var(--ease-standard, ease);
 }
 
-.budgetRow strong {
-  font-size: var(--text-md, 1rem);
+.ribbonSegment:nth-child(even) {
+  background: var(--color-accent-strong, #00554c);
+}
+
+.ribbon[data-over="true"] .ribbonSegment {
+  background: var(--color-danger, #b42332);
+}
+
+.ribbonLabel {
+  overflow: hidden;
+  padding: 0 2px;
+  font-size: var(--text-xs, 0.8125rem);
+  font-weight: var(--weight-bold, 700);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.budgetRow[data-over="true"] {
+.ribbonRest {
+  flex-basis: 0;
+  min-width: 0;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-border, #d7e1dc) 0 1.5px,
+    transparent 1.5px 7px
+  );
+}
+
+.ribbonLimit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--color-ink, #142d38);
+}
+
+.ribbonThin {
+  height: 6px;
+  gap: 1px;
+  border-radius: var(--radius-pill, 999px);
+}
+
+.ribbonThin .ribbonLabel {
+  display: none;
+}
+
+.budgetFigures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3, 12px);
+  margin: 0;
+}
+
+.budgetFigures dt {
+  color: var(--color-muted, #536671);
+  font-size: var(--text-xs, 0.8125rem);
+}
+
+.budgetFigures dd {
+  margin: 0;
+  color: var(--color-muted, #536671);
+  font-size: var(--text-sm, 0.875rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.budgetFigures dd .flash {
+  color: var(--color-ink, #142d38);
+  font-size: var(--text-2xl, 1.75rem);
+  font-weight: var(--weight-bold, 700);
+  line-height: 1.1;
+}
+
+.budgetFigures [data-over="true"] dd,
+.budgetFigures [data-over="true"] dd .flash {
   color: var(--color-danger, #b42332);
 }
 
-.budgetBar {
-  height: 8px;
-  overflow: hidden;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--color-border, #d7e1dc);
-}
-
-.budgetBar span {
-  display: block;
-  height: 100%;
-  background: var(--color-accent, #006b60);
-  transform-origin: left center;
-  transition: transform var(--duration-base, 200ms) var(--ease-standard, ease);
-}
-
-.budgetBar[data-over="true"] span {
-  background: var(--color-danger, #b42332);
+.flash {
+  display: inline-block;
+  border-radius: 4px;
+  animation: flash 700ms var(--ease-standard, ease);
 }
 
 .slots {
@@ -463,9 +748,10 @@
 .slot {
   display: grid;
   gap: var(--space-2, 8px);
-  padding: var(--space-3, 12px);
+  padding: 10px var(--space-3, 12px);
   border: 1px solid var(--color-border, #d7e1dc);
   border-radius: var(--radius-md, 12px);
+  animation: slotIn 220ms var(--ease-standard, ease);
 }
 
 .slot[data-state="issue"] {
@@ -474,57 +760,119 @@
 }
 
 .slot[data-state="empty"] {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3, 12px);
+  min-height: 44px;
+  align-content: center;
   border-style: dashed;
+  color: var(--color-muted, #536671);
+  font-size: var(--text-sm, 0.875rem);
+  animation: none;
 }
 
 .slotHead {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3, 12px);
-}
-
-.slotIndex {
-  flex: none;
   display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--color-surface-sunken, #eef1ea);
-  font-size: var(--text-sm, 0.875rem);
-  font-weight: var(--weight-bold, 700);
-}
-
-.slotText {
-  flex: 1;
-  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2, 8px);
 }
 
 .slotName {
+  display: -webkit-box;
   margin: 0;
+  overflow: hidden;
+  font-size: var(--text-sm, 0.875rem);
   font-weight: var(--weight-semibold, 600);
-  overflow-wrap: anywhere;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .slotCost {
-  flex: none;
+  font-size: var(--text-sm, 0.875rem);
   font-weight: var(--weight-semibold, 600);
   font-variant-numeric: tabular-nums;
 }
 
-.synergy {
+.slotRemove {
   display: grid;
-  gap: var(--space-1, 4px);
-  padding: var(--space-3, 12px);
-  border-radius: var(--radius-md, 12px);
-  background: var(--color-accent-soft, #ddf3ec);
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-muted, #536671);
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.synergy p {
+.slotRemove:hover {
+  background: var(--color-surface-sunken, #eef1ea);
+  color: var(--color-danger, #b42332);
+}
+
+.slotRemove:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.slotScope {
   margin: 0;
+  color: var(--color-muted, #536671);
+  font-size: var(--text-xs, 0.8125rem);
+}
+
+.picker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px var(--space-2, 8px);
+}
+
+.pickerLabel {
+  color: var(--color-muted, #536671);
+  font-size: var(--text-xs, 0.8125rem);
+}
+
+.select {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--space-2, 8px);
+  border: 1px solid var(--color-border-strong, #b8c7c0);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--color-surface, #fff);
+  color: var(--color-ink, #142d38);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.select[aria-invalid="true"] {
+  border-color: var(--color-danger, #b42332);
+}
+
+.select:disabled {
+  background: var(--color-surface-sunken, #eef1ea);
+  color: var(--color-muted, #536671);
+}
+
+.pickerHint {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 2px;
+}
+
+.pickerHint:empty {
+  display: none;
+}
+
+.synergy {
+  margin: 0;
+  padding: 10px var(--space-3, 12px);
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-accent-soft, #ddf3ec);
+  font-size: var(--text-sm, 0.875rem);
 }
 
 .summary {
@@ -559,27 +907,25 @@
 
 /* aria-disabled: кнопка остаётся фокусируемой и по нажатию ведёт к сводке причин. */
 .evaluate[aria-disabled="true"],
-.evaluateCompact[aria-disabled="true"] {
+.evaluateCompact[aria-disabled="true"],
+.evaluate[aria-disabled="true"]:hover:not(:disabled),
+.evaluateCompact[aria-disabled="true"]:hover:not(:disabled) {
   border-color: var(--color-border-strong, #b8c7c0);
   background: var(--color-border-strong, #b8c7c0);
   color: var(--color-ink, #142d38);
   cursor: not-allowed;
 }
 
-.evaluate[aria-disabled="true"]:hover:not(:disabled),
-.evaluateCompact[aria-disabled="true"]:hover:not(:disabled) {
-  background: var(--color-border-strong, #b8c7c0);
-}
-
-/* ---------- Мобильная нижняя панель ---------- */
+/* ---------- Мобильная панель ---------- */
 
 .mobileBar {
   display: none;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 899px) {
   .planner {
-    padding-bottom: calc(var(--mobile-bar-height) + var(--space-4, 16px) + env(safe-area-inset-bottom, 0px));
+    padding-top: var(--space-5, 24px);
+    padding-bottom: calc(var(--mobile-bar-height) + var(--space-6, 32px) + env(safe-area-inset-bottom, 0px));
   }
 
   .layout {
@@ -589,26 +935,38 @@
   .filters {
     flex-wrap: nowrap;
     overflow-x: auto;
-    margin: 0 calc(-1 * var(--space-1, 4px));
-    padding: var(--space-1, 4px);
-    scrollbar-width: thin;
+    scrollbar-width: none;
   }
 
   .chip {
     flex: none;
   }
 
+  .trayColumn {
+    position: static;
+  }
+
+  .planner[data-tray-open="true"] .scrim {
+    position: fixed;
+    z-index: 30;
+    inset: 0;
+    display: block;
+    background: color-mix(in srgb, var(--color-ink, #142d38) 40%, transparent);
+    animation: fade 200ms var(--ease-standard, ease);
+  }
+
   .tray {
     position: fixed;
-    z-index: 20;
+    z-index: 31;
     left: 0;
     right: 0;
     bottom: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom, 0px));
-    top: auto;
-    max-height: min(75dvh, calc(100dvh - var(--mobile-bar-height) - 48px));
-    padding: var(--space-4, 16px);
+    max-height: min(78dvh, calc(100dvh - var(--mobile-bar-height) - 48px));
+    padding: var(--space-5, 24px) var(--space-4, 16px);
+    border-width: 1px 0 0;
     border-radius: var(--radius-panel, 20px) var(--radius-panel, 20px) 0 0;
     box-shadow: var(--shadow-raised, none);
+    animation: sheetIn 240ms var(--ease-standard, ease);
   }
 
   .planner[data-tray-open="false"] .tray {
@@ -621,55 +979,122 @@
 
   .mobileBar {
     position: fixed;
-    z-index: 21;
+    z-index: 32;
     left: 0;
     right: 0;
     bottom: 0;
     display: flex;
     align-items: center;
-    gap: var(--space-2, 8px);
+    gap: var(--space-3, 12px);
     min-height: var(--mobile-bar-height);
     padding: var(--space-2, 8px) var(--space-4, 16px) calc(var(--space-2, 8px) + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--color-border, #d7e1dc);
     background: var(--color-surface, #fff);
-    box-shadow: var(--shadow-raised, none);
   }
 
   .mobileSummary {
     flex: 1;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0 var(--space-2, 8px);
+    display: grid;
+    gap: 6px;
     min-width: 0;
-    padding: var(--space-1, 4px) var(--space-3, 12px);
-    border: 1px solid var(--color-border-strong, #b8c7c0);
-    background: var(--color-surface, #fff);
+    min-height: 48px;
+    padding: 4px;
+    border: 0;
+    border-radius: var(--radius-sm, 8px);
+    background: transparent;
     color: var(--color-ink, #142d38);
+    font: inherit;
     text-align: left;
+    cursor: pointer;
+  }
+
+  .mobileLine {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3, 12px);
     font-size: var(--text-sm, 0.875rem);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .mobileLine strong {
+    font-size: var(--text-md, 1rem);
+  }
+
+  .mobileLine [data-over="true"] {
+    color: var(--color-danger, #b42332);
   }
 
   .mobileToggle {
     margin-left: auto;
     color: var(--color-accent, #006b60);
     font-weight: var(--weight-semibold, 600);
-    text-decoration: underline;
-    text-underline-offset: 3px;
   }
 
   .evaluateCompact {
     flex: none;
-    padding: 0 var(--space-4, 16px);
+    padding: 0 var(--space-5, 24px);
+  }
+}
+
+/* Сенсорный ввод: цели не меньше 44 px. */
+@media (pointer: coarse) {
+  .chip,
+  .pillText,
+  .moreToggle {
+    min-height: 44px;
+  }
+
+  .slotRemove {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* ---------- Движение ---------- */
+
+@keyframes segIn {
+  from {
+    transform: scaleY(0.55);
+    filter: brightness(1.3);
+  }
+}
+
+@keyframes flash {
+  from {
+    background: var(--color-accent-soft, #ddf3ec);
+  }
+}
+
+@keyframes slotIn {
+  from {
+    transform: translateY(6px);
+  }
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.4);
+  }
+}
+
+@keyframes sheetIn {
+  from {
+    transform: translateY(24px);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .budgetBar span,
-  .chip,
-  .mobileSummary,
-  .buttonLink {
-    transition: none;
+  .planner *,
+  .planner *::before,
+  .planner *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

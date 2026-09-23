@@ -7,21 +7,21 @@ interface DistrictPickerProps {
   readonly options: readonly DistrictOption[];
   readonly value: DistrictId | "";
   readonly label: string;
-  /** Дополнительная подсказка вызывающего компонента, связана с select через aria-describedby. */
-  readonly children?: ReactNode;
   readonly onChange: (districtId: DistrictId | "") => void;
+  /** Подсказка вызывающего компонента, связана с select через aria-describedby. */
+  readonly children?: ReactNode;
 }
 
 /**
- * Назначение района для районной меры. Районы с конфликтом «в одном районе»
- * недоступны для выбора, причина видна текстом под select, без hover.
+ * Компактное назначение района в строке плана. Районы с конфликтом недоступны,
+ * конфликт текущего назначения написан текстом под select.
  */
 export function DistrictPicker({ options, value, label, children, onChange }: DistrictPickerProps) {
   const id = useId();
   const hintId = `${id}-hint`;
   const current = options.find((option) => option.id === value);
-  const blocked = options.filter((option) => option.conflicts.length > 0 && option.id !== value);
   const isUnknown = value !== "" && current === undefined;
+  const conflicts = current?.conflicts ?? [];
 
   return (
     <div className={styles.picker}>
@@ -33,10 +33,10 @@ export function DistrictPicker({ options, value, label, children, onChange }: Di
         className={styles.select}
         value={value}
         aria-describedby={hintId}
-        aria-invalid={isUnknown || (current?.conflicts.length ?? 0) > 0}
+        aria-invalid={isUnknown || conflicts.length > 0}
         onChange={(event) => onChange(event.target.value)}
       >
-        <option value="">— район не выбран —</option>
+        <option value="">Не выбран</option>
         {isUnknown ? <option value={value}>Неизвестный район «{value}»</option> : null}
         {options.map((option) => (
           <option
@@ -49,18 +49,13 @@ export function DistrictPicker({ options, value, label, children, onChange }: Di
         ))}
       </select>
       <div id={hintId} className={styles.pickerHint}>
-        {current && current.conflicts.length > 0 ? (
+        {current && conflicts.length > 0 ? (
           <p className={styles.textDanger}>
             <span aria-hidden="true">✕ </span>
-            {current.name}: {current.conflicts.join("; ")}
+            В районе {current.name} конфликт: {conflicts.join(" ")}
           </p>
         ) : null}
         {children}
-        {blocked.map((option) => (
-          <p key={option.id} className={styles.textMuted}>
-            Недоступно — {option.name}: {option.conflicts.join("; ")}
-          </p>
-        ))}
       </div>
     </div>
   );

@@ -1,0 +1,349 @@
+/* ===== Каркас главной ===== */
+.home {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: 0 var(--page-gutter) var(--space-section);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-6);
+  padding-top: var(--space-section);
+}
+
+.sectionHead {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 44rem;
+}
+
+.sectionTitle {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.sectionLead {
+  color: var(--color-muted);
+  font-size: var(--text-lg);
+  max-width: var(--measure);
+}
+
+/* ===== Первый экран ===== */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "text"
+    "facts";
+  align-content: center;
+  gap: var(--space-7) var(--space-7);
+  min-height: min(760px, calc(100svh - var(--header-height) - var(--space-5)));
+  padding-block: var(--space-7) var(--space-6);
+}
+
+@media (max-width: 899px) {
+  .hero {
+    min-height: 0;
+    gap: var(--space-6);
+  }
+}
+
+@media (min-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-areas:
+      "text art"
+      "facts facts";
+    align-items: center;
+  }
+}
+
+.heroText {
+  grid-area: text;
+  display: grid;
+  gap: var(--space-5);
+  justify-items: start;
+}
+
+.heroTitle {
+  font-size: var(--text-hero);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.heroLead {
+  max-width: 34rem;
+  color: var(--color-muted);
+  font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+  line-height: 1.5;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  padding-top: var(--space-2);
+}
+
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  color: var(--color-ink);
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+  text-decoration-color: var(--color-border-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  transition: text-decoration-color var(--duration-fast) var(--ease-standard);
+}
+
+.textLink:hover {
+  text-decoration-color: currentColor;
+}
+
+.heroArt {
+  grid-area: art;
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .heroArt {
+    display: block;
+  }
+}
+
+/* Линейный эскиз схемы: один оркестрованный момент при загрузке */
+.sketch {
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+
+.sketchStreet {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.sketchRiver {
+  fill: none;
+  stroke: var(--color-water);
+  stroke-width: 22;
+  stroke-linejoin: round;
+}
+
+.sketchBridge {
+  fill: none;
+  stroke: var(--color-canvas);
+  stroke-width: 4;
+}
+
+.sketchPlate {
+  fill: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  stroke: var(--color-ink-soft);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: sketch-draw 1100ms var(--ease-out) both;
+}
+
+.sketchNode {
+  fill: var(--color-accent);
+  animation: sketch-node 400ms var(--ease-out) both;
+}
+
+@keyframes sketch-draw {
+  from {
+    stroke-dashoffset: 1;
+    fill-opacity: 0;
+  }
+}
+
+@keyframes sketch-node {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sketchPlate,
+  .sketchNode {
+    animation: none;
+  }
+}
+
+/* ===== Факты сценария ===== */
+.facts {
+  grid-area: facts;
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.factList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, max-content));
+  gap: var(--space-4) clamp(var(--space-5), 5vw, var(--space-8));
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  gap: var(--space-1);
+  align-content: end;
+}
+
+.fact dt {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.fact dd {
+  margin: 0;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.fact dd.factValueLarge {
+  color: var(--color-accent);
+}
+
+.factUnit {
+  color: var(--color-muted);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0;
+}
+
+.factsError {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  max-width: var(--measure);
+  color: var(--color-ink);
+}
+
+.factsError strong {
+  color: var(--color-danger);
+}
+
+@media (max-width: 559px) {
+  .factList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .fact:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ===== Как это работает ===== */
+.steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+@media (min-width: 768px) {
+  .steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-6) clamp(var(--space-5), 3vw, var(--space-7));
+  }
+}
+
+.step {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-ink);
+}
+
+.stepNumber {
+  color: var(--color-accent);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepTitle {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.stepText {
+  color: var(--color-muted);
+  max-width: 34ch;
+}
+
+/* ===== Районы: заглушки ===== */
+.placeholder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-panel);
+  color: var(--color-muted);
+}
+
+.placeholderGrid {
+  display: grid;
+  gap: var(--space-5);
+}
+
+@media (min-width: 1024px) {
+  .placeholderGrid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  }
+}
+
+/* ===== Заключительный призыв ===== */
+.final {
+  padding-top: var(--space-section);
+}
+
+.finalInner {
+  display: grid;
+  gap: var(--space-5);
+  justify-items: start;
+  padding: clamp(var(--space-6), 5vw, var(--space-8));
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-sunken);
+}
+
+.finalTitle {
+  font-size: clamp(2rem, 1.3rem + 2.6vw, 3.5rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.finalText {
+  max-width: 40rem;
+  color: var(--color-muted);
+  font-size: var(--text-lg);
+}

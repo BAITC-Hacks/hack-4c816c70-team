@@ -1,40 +1,19 @@
 /*
  * Единые токены «Аким на 5 часов».
- * Базовые значения — из docs/design.md. Производные токены строятся только из них.
+ * Имена сохранены для совместимости; значения зависят от темы на <html data-theme>:
+ * light — «День», dark — «Ночь», paper — «Бумага». Системный режим — это
+ * предпочтение, которое ThemeProvider превращает в light или dark.
  */
+
+/* ===== Не зависящие от темы ===== */
 :root {
-  /* Цвет: базовые токены design.md */
-  --color-canvas: #f4f5ef;
-  --color-surface: #ffffff;
-  --color-ink: #142d38;
-  --color-muted: #536671;
-  --color-accent: #006b60;
-  --color-accent-soft: #ddf3ec;
-  --color-warning: #8a4b08;
-  --color-danger: #b42332;
-  --color-border: #d7e1dc;
-
-  /* Производные оттенки */
-  --color-accent-strong: #00554c;
-  --color-accent-ink: #ffffff;
-  --color-surface-sunken: #eef1ea;
-  --color-border-strong: #b8c7c0;
-  --color-danger-soft: #fbe9eb;
-  --color-warning-soft: #fbf0e1;
-  --color-ink-soft: #1f3f4c;
-  --color-on-ink: #f4f5ef;
-  --color-on-ink-muted: #a9bcc2;
-  --color-water: #cfe4e6;
-  --color-water-edge: #a8cdd1;
-  --color-focus: #006b60;
-
   /* Радиусы */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-panel: 20px;
   --radius-pill: 999px;
 
-  /* Отступы: шаг 4, 8, 12, 16, 24, 32, 48 */
+  /* Отступы: шаг 4, 8, 12, 16, 24, 32, 48 (+ крупные для секций главной) */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -42,42 +21,163 @@
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
+  --space-8: 64px;
+  --space-section: clamp(64px, 5rem + 2vw, 112px);
 
-  /* Типографика */
-  --font-sans: "Segoe UI", "Segoe UI Variable Text", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  /* Типографика: Manrope подключает GPT через next/font/local в --font-manrope */
+  --font-sans: var(--font-manrope, "Manrope"), "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial,
+    sans-serif;
   --text-xs: 0.8125rem; /* 13 */
   --text-sm: 0.875rem; /* 14 */
   --text-md: 1rem; /* 16 */
   --text-lg: 1.125rem; /* 18 */
   --text-xl: 1.375rem; /* 22 */
   --text-2xl: 1.75rem; /* 28 */
-  --text-3xl: 2.25rem; /* 36 */
-  --text-display: clamp(3rem, 2.2rem + 2.6vw, 4.5rem); /* 48–72 */
-  --leading-tight: 1.15;
-  --leading-body: 1.5;
+  --text-3xl: clamp(1.875rem, 1.4rem + 1.4vw, 2.5rem); /* 30–40 */
+  --text-display: clamp(3rem, 2.2rem + 2.6vw, 4.5rem); /* 48–72: крупные числа */
+  --text-hero: clamp(2.25rem, 1.1rem + 4.6vw, 5rem); /* 36–80: главный заголовок */
+  --leading-tight: 1.08;
+  --leading-snug: 1.25;
+  --leading-body: 1.55;
+  --tracking-tight: -0.035em;
+  /* Три начертания: 400, 600, 800 */
   --weight-regular: 400;
-  --weight-medium: 500;
+  --weight-medium: 600;
   --weight-semibold: 600;
-  --weight-bold: 700;
+  --weight-bold: 800;
+  --measure: 68ch;
 
   /* Раскладка */
-  --content-max: 1440px;
-  --page-gutter: clamp(16px, 2.6vw, 40px);
+  --content-max: 1280px;
+  --page-gutter: clamp(16px, 3vw, 40px);
   --control-height: 44px;
   --header-height: 64px;
 
-  /* Тени: умеренные, окрашенные в цвет ink */
-  --shadow-panel: 0 1px 2px rgb(20 45 56 / 0.06), 0 8px 24px -12px rgb(20 45 56 / 0.18);
-  --shadow-raised: 0 2px 4px rgb(20 45 56 / 0.08), 0 16px 32px -16px rgb(20 45 56 / 0.28);
-
-  /* Движение: 160–220 мс, только opacity/transform */
+  /* Движение */
   --duration-fast: 160ms;
   --duration-base: 200ms;
-  --duration-slow: 220ms;
+  --duration-slow: 240ms;
+  --duration-reveal: 440ms;
+  --reveal-stagger: 70ms;
+  --reveal-distance: 16px;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Фокус */
-  --focus-ring: 0 0 0 3px var(--color-surface), 0 0 0 5px var(--color-focus);
+  --focus-ring: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-focus);
+}
+
+/* ===== День (по умолчанию и без JS) ===== */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-canvas: #f5f6f2;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #edf0ea;
+  --color-ink: #13262e;
+  --color-ink-soft: #2a4450;
+  --color-muted: #56666e;
+  --color-accent: #006b60;
+  --color-accent-strong: #00554c;
+  --color-accent-ink: #ffffff;
+  --color-accent-soft: #ddf1ea;
+  --color-warning: #8a4b08;
+  --color-warning-soft: #fbf0e1;
+  --color-danger: #b42332;
+  --color-danger-soft: #fbe9eb;
+  --color-border: #dde3de;
+  --color-border-strong: #7d928a;
+  --color-on-ink: #f5f6f2;
+  --color-on-ink-muted: #a9bcc2;
+  --color-water: #d3e6e6;
+  --color-water-edge: #afcfd2;
+  --color-focus: #006b60;
+  --shadow-panel: 0 1px 2px rgb(19 38 46 / 0.05), 0 12px 32px -20px rgb(19 38 46 / 0.22);
+  --shadow-raised: 0 2px 4px rgb(19 38 46 / 0.06), 0 20px 40px -20px rgb(19 38 46 / 0.3);
+}
+
+/* ===== Ночь ===== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: #0f1b20;
+  --color-surface: #16252b;
+  --color-surface-sunken: #1c2e35;
+  --color-ink: #e6eeeb;
+  --color-ink-soft: #9fb4b0;
+  --color-muted: #9aadb2;
+  --color-accent: #3fbfa8;
+  --color-accent-strong: #6ad3bf;
+  --color-accent-ink: #04201b;
+  --color-accent-soft: #143c37;
+  --color-warning: #e9a961;
+  --color-warning-soft: #3a2a17;
+  --color-danger: #f08a93;
+  --color-danger-soft: #3d1c21;
+  --color-border: #26383f;
+  --color-border-strong: #62808a;
+  --color-on-ink: #0f1b20;
+  --color-on-ink-muted: #3e555d;
+  --color-water: #173239;
+  --color-water-edge: #24474f;
+  --color-focus: #6ad3bf;
+  --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -20px rgb(0 0 0 / 0.6);
+  --shadow-raised: 0 2px 4px rgb(0 0 0 / 0.35), 0 20px 40px -20px rgb(0 0 0 / 0.7);
+}
+
+/* ===== Бумага ===== */
+:root[data-theme="paper"] {
+  color-scheme: light;
+  --color-canvas: #f1ece1;
+  --color-surface: #fbf8f1;
+  --color-surface-sunken: #e9e2d3;
+  --color-ink: #1e2b2a;
+  --color-ink-soft: #3a4744;
+  --color-muted: #5b5f57;
+  --color-accent: #0a6157;
+  --color-accent-strong: #074d45;
+  --color-accent-ink: #ffffff;
+  --color-accent-soft: #dce9dd;
+  --color-warning: #80450a;
+  --color-warning-soft: #f4e4cc;
+  --color-danger: #a3252d;
+  --color-danger-soft: #f5e0dc;
+  --color-border: #ddd4c3;
+  --color-border-strong: #8a826f;
+  --color-on-ink: #f1ece1;
+  --color-on-ink-muted: #b3b7ae;
+  --color-water: #d5e1da;
+  --color-water-edge: #b2c7bd;
+  --color-focus: #0a6157;
+  --shadow-panel: 0 1px 2px rgb(60 48 30 / 0.06), 0 12px 32px -20px rgb(60 48 30 / 0.22);
+  --shadow-raised: 0 2px 4px rgb(60 48 30 / 0.08), 0 20px 40px -20px rgb(60 48 30 / 0.3);
+}
+
+/* Без JS и без выбранной темы: следуем системе */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --color-canvas: #0f1b20;
+    --color-surface: #16252b;
+    --color-surface-sunken: #1c2e35;
+    --color-ink: #e6eeeb;
+    --color-ink-soft: #9fb4b0;
+    --color-muted: #9aadb2;
+    --color-accent: #3fbfa8;
+    --color-accent-strong: #6ad3bf;
+    --color-accent-ink: #04201b;
+    --color-accent-soft: #143c37;
+    --color-warning: #e9a961;
+    --color-warning-soft: #3a2a17;
+    --color-danger: #f08a93;
+    --color-danger-soft: #3d1c21;
+    --color-border: #26383f;
+    --color-border-strong: #62808a;
+    --color-on-ink: #0f1b20;
+    --color-on-ink-muted: #3e555d;
+    --color-water: #173239;
+    --color-water-edge: #24474f;
+    --color-focus: #6ad3bf;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -85,5 +185,8 @@
     --duration-fast: 0ms;
     --duration-base: 0ms;
     --duration-slow: 0ms;
+    --duration-reveal: 0ms;
+    --reveal-stagger: 0ms;
+    --reveal-distance: 0px;
   }
 }

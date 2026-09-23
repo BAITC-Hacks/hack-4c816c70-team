@@ -8,6 +8,7 @@ interface DistrictDetailsProps {
   readonly indicatorCount: number;
   readonly criticalThreshold: number;
   readonly headingId: string;
+  readonly headingLevel?: 2 | 3;
 }
 
 /** Шкала показателей 0–100: только для ширины полосы, значения не изменяются. */
@@ -20,15 +21,18 @@ export function DistrictDetails({
   indicatorCount,
   criticalThreshold,
   headingId,
+  headingLevel = 2,
 }: DistrictDetailsProps) {
+  const Heading = headingLevel === 2 ? "h2" : "h3";
+  const SubHeading = headingLevel === 2 ? "h3" : "h4";
   const thresholdLabel = formatAmount(criticalThreshold);
 
   if (!summary) {
     return (
       <div className={styles.detailsEmpty}>
-        <h2 id={headingId} className={styles.detailsTitle}>
+        <Heading id={headingId} className={styles.detailsTitle}>
           Район не выбран
-        </h2>
+        </Heading>
         <p className={styles.muted}>
           Выберите район на схеме или в списке ниже. Здесь появятся его {indicatorCount}{" "}
           {plural(indicatorCount, ["исходный показатель", "исходных показателя", "исходных показателей"])}{" "}
@@ -44,9 +48,9 @@ export function DistrictDetails({
   return (
     <div className={styles.details}>
       <div className={styles.detailsHead}>
-        <h2 id={headingId} className={styles.detailsTitle}>
+        <Heading id={headingId} className={styles.detailsTitle}>
           {district.name}
-        </h2>
+        </Heading>
         <div className={styles.detailsMetrics}>
           <Metric size="md" label="Доля населения" value={formatShare(district.populationShare)} />
           {district.score !== undefined ? (
@@ -68,7 +72,7 @@ export function DistrictDetails({
         )}
       </p>
 
-      <h3 className={styles.readingsTitle}>Исходные показатели, шкала 0–100</h3>
+      <SubHeading className={styles.readingsTitle}>Исходные показатели, шкала 0–100</SubHeading>
       <ul className={styles.readings} role="list">
         {readings.map(({ indicator, value, isCritical }) => (
           <li key={indicator.id} className={cx(styles.reading, isCritical && styles.readingCritical)}>

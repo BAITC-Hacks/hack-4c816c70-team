@@ -1,0 +1,23 @@
+.reveal {
+  transition:
+    opacity var(--duration-reveal) var(--ease-out),
+    transform var(--duration-reveal) var(--ease-out);
+  transition-delay: calc(var(--reveal-index, 0) * var(--reveal-stagger));
+}
+
+/* Скрываем только когда JS готов показать блок; без JS всё видно */
+:global(:root[data-motion="ready"]) .reveal:not(.visible):not(:focus-within) {
+  opacity: 0;
+  transform: translateY(var(--reveal-distance));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(:root[data-motion="ready"]) .reveal:not(.visible):not(:focus-within) {
+    opacity: 1;
+    transform: none;
+  }
+
+  .reveal {
+    transition: none;
+  }
+}
