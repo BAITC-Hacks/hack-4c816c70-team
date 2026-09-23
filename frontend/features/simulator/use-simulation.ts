@@ -45,6 +45,9 @@ export function useSimulation(validateDraft: ValidateDraft) {
   const requestId = useRef(0);
   const scenarioController = useRef<AbortController | null>(null);
   const evaluationController = useRef<AbortController | null>(null);
+  // Reducer защищает состояние после ререндера, а ref закрывает окно между
+  // двумя синхронными кликами до того, как React успеет обновить state.
+  const evaluationInFlight = useRef(false);
   const draftHydrated = useRef(false);
   const skipFirstPersist = useRef(false);
 
@@ -80,9 +83,10 @@ export function useSimulation(validateDraft: ValidateDraft) {
 
   const setChoices = useCallback((choices: readonly ChoiceDraft[]) => dispatch({ type: "set-choices", choices }), []);
   const evaluate = useCallback(async () => {
-    if (state.scenario.status !== "ready" || state.evaluation.status === "pending") return;
+    if (state.scenario.status !== "ready" || state.evaluation.status === "pending" || evaluationInFlight.current) return;
     const validation = validateDraft(state.scenario.scenario, state.choices);
     if (!validation.canSubmit) return;
+    evaluationInFlight.current = true;
     const submittedChoices = state.choices.map((choice) => ({ ...choice }));
     const id = ++requestId.current;
     const revision = state.revision;
@@ -92,8 +96,9 @@ export function useSimulation(validateDraft: ValidateDraft) {
     dispatch({ type: "evaluate-start", requestId: id, submittedChoices });
     try { dispatch({ type: "evaluate-success", requestId: id, revision, result: await evaluateChoices(buildEvaluatePayload(state.scenario.scenario, submittedChoices), controller.signal) }); }
     catch (error) { if (!controller.signal.aborted) dispatch({ type: "evaluate-error", requestId: id, revision, message: apiMessage(error) }); }
+    finally { evaluationInFlight.current = false; }
   }, [state, validateDraft]);
 
-  const reset = useCallback(() => { evaluationController.current?.abort(); requestId.current += 1; try { sessionStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* Storage is optional. */ } dispatch({ type: "reset" }); }, []);
+  const reset = useCallback(() => { evaluationController.current?.abort(); evaluationInFlight.current = false; requestId.current += 1; try { sessionStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* Storage is optional. */ } dispatch({ type: "reset" }); }, []);
   return { state, dispatch, loadScenario, setChoices, evaluate, reset };
 }

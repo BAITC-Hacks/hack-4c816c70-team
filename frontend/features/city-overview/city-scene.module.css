@@ -43,10 +43,6 @@
   text-align: right;
 }
 
-.captionNote {
-  color: var(--color-muted);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .canvasHost,
   .fallback {

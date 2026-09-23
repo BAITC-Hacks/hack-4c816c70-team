@@ -938,7 +938,7 @@
 @media (max-width: 899px) {
   .planner {
     padding-top: var(--space-5, 24px);
-    padding-bottom: calc(var(--mobile-bar-height) + var(--space-6, 32px) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--mobile-bar-actual, calc(var(--mobile-bar-height) + env(safe-area-inset-bottom, 0px))) + var(--space-6, 32px));
   }
 
   .layout {
@@ -959,7 +959,7 @@
   /* При переходе с клавиатуры элемент в фокусе не прячется под шапку или нижнюю панель. */
   .planner :is(button, input, select) {
     scroll-margin-top: var(--space-6, 32px);
-    scroll-margin-bottom: calc(var(--mobile-bar-height) + var(--space-4, 16px) + env(safe-area-inset-bottom, 0px));
+    scroll-margin-bottom: calc(var(--mobile-bar-actual, calc(var(--mobile-bar-height) + env(safe-area-inset-bottom, 0px))) + var(--space-4, 16px));
   }
 
   .chip {
@@ -984,8 +984,9 @@
     z-index: 31;
     left: 0;
     right: 0;
-    bottom: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom, 0px));
-    max-height: min(78dvh, calc(100dvh - var(--mobile-bar-height) - 48px));
+    /* Фактическая высота панели (с safe-area) из ResizeObserver; до замера — расчётная. */
+    bottom: var(--mobile-bar-actual, calc(var(--mobile-bar-height) + env(safe-area-inset-bottom, 0px)));
+    max-height: min(78dvh, calc(100dvh - var(--mobile-bar-actual, var(--mobile-bar-height)) - 48px));
     padding: var(--space-5, 24px) var(--space-4, 16px);
     border-width: 1px 0 0;
     border-radius: var(--radius-panel, 20px) var(--radius-panel, 20px) 0 0;
@@ -1055,9 +1056,21 @@
   }
 
   .mobileToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     margin-left: auto;
     color: var(--color-accent, #006b60);
     font-weight: var(--weight-semibold, 600);
+  }
+
+  /* Шеврон вверх — план можно раскрыть; вниз — раскрыт. */
+  .mobileToggle .chevron {
+    transform: translateY(2px) rotate(-135deg);
+  }
+
+  .mobileSummary[aria-expanded="true"] .mobileToggle .chevron {
+    transform: translateY(-2px) rotate(45deg);
   }
 
   .evaluateCompact {

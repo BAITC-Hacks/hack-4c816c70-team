@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type {
   CategoryId,
@@ -69,6 +69,30 @@ export function Planner({
   const summaryRef = useRef<HTMLDivElement>(null);
   const trayHeadingRef = useRef<HTMLHeadingElement>(null);
   const trayToggleRef = useRef<HTMLButtonElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const mobileBarRef = useRef<HTMLDivElement>(null);
+
+  // Нижняя панель может вырасти (крупный текст, перенос строки). Лист плана и отступ
+  // страницы опираются на её фактическую высоту, а не на константу, иначе CTA уходит под панель.
+  function syncMobileBarHeight() {
+    const height = mobileBarRef.current?.getBoundingClientRect().height ?? 0;
+    if (height > 0) sectionRef.current?.style.setProperty("--mobile-bar-actual", `${Math.ceil(height)}px`);
+  }
+
+  useEffect(() => {
+    const bar = mobileBarRef.current;
+    const section = sectionRef.current;
+    if (!bar || !section) return;
+    const sync = () => {
+      const height = bar.getBoundingClientRect().height;
+      if (height > 0) section.style.setProperty("--mobile-bar-actual", `${Math.ceil(height)}px`);
+    };
+    sync();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(sync);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
 
   const rules = scenario.rules;
   const requiredChoices = rules?.requiredChoices ?? null;
@@ -148,6 +172,7 @@ export function Planner({
     if (isEvaluating) return;
     if (!validation.canSubmit) {
       flushSync(() => setTrayOpen(true));
+      syncMobileBarHeight();
       summaryRef.current?.focus();
       return;
     }
@@ -156,6 +181,7 @@ export function Planner({
 
   function openTray() {
     flushSync(() => setTrayOpen(true));
+    syncMobileBarHeight();
     trayHeadingRef.current?.focus();
   }
 
@@ -168,6 +194,7 @@ export function Planner({
 
   return (
     <section
+      ref={sectionRef}
       className={styles.planner}
       aria-labelledby={`${trayId}-title`}
       data-tray-open={isTrayOpen}
@@ -294,7 +321,7 @@ export function Planner({
           </div>
         </div>
 
-        <div className={styles.mobileBar}>
+        <div ref={mobileBarRef} className={styles.mobileBar}>
           <button
             ref={trayToggleRef}
             type="button"
@@ -312,7 +339,11 @@ export function Planner({
                   ? `✕ превышение ${formatUnits(-validation.provisionalRemaining)} ед.`
                   : `остаток ${formatUnits(validation.provisionalRemaining)} ед.`}
               </span>
-              <span className={styles.mobileToggle}>{isTrayOpen ? "Свернуть" : "План"}</span>
+              {/* Подпись постоянная: смена на «Свернуть» переносила строку и увеличивала панель. */}
+              <span className={styles.mobileToggle}>
+                План
+                <span className={styles.chevron} aria-hidden="true" />
+              </span>
             </span>
             <BudgetRibbon budget={scenario.budget} segments={segments} className={styles.ribbonThin} />
           </button>

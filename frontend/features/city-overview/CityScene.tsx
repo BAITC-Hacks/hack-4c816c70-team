@@ -113,13 +113,9 @@ export function CityScene({ districtIds, selectedDistrictId, onSelectDistrict }:
           <AtlasSketch />
         </div>
       </div>
+      {/* Подпись постоянная: смена текста при загрузке сцены сдвигала блок ниже */}
       <figcaption className={styles.caption}>
-        Схематичная визуализация города
-        <span className={styles.captionNote}>
-          {showScene
-            ? " — выбранный район подсвечен, высота зданий условная."
-            : " — условная схема районов."}
-        </span>
+        Схематичная визуализация города: расположение и высота зданий условные.
       </figcaption>
     </figure>
   );
