@@ -1,5 +1,5 @@
-using System.Globalization;
 using CitySimulator.Api.Features.Scenario;
+using static CitySimulator.Api.Features.Simulation.TextNumberFormat;
 
 namespace CitySimulator.Api.Features.Simulation;
 
@@ -129,9 +129,4 @@ public static class ExplanationBuilder
             .Select(kv => (s.District, kv.Key, kv.Value)));
 
     private static string DistrictName(string id) => ScenarioData.DistrictsById[id].Name;
-
-    private static string F(double value) =>
-        ScoreCalculator.Round(value).ToString("0.##", CultureInfo.InvariantCulture);
-
-    private static string Signed(double value) => (value >= 0 ? "+" : "−") + F(Math.Abs(value));
 }

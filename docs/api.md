@@ -73,22 +73,22 @@ Response `200` for this request (actual output; `districts` shortened to Nura, t
   }],
   "appliedSynergies": [{ "measureIds": ["M10", "M12"], "districtId": "nura", "indicatorId": "B1", "delta": 2 }],
   "explanation": {
-    "summary": "Итоговый Score 56.54 против базового 52.56 (+3.98). Потрачено 95 из 100. ...",
+    "summary": "Итоговый Score 56,54 против базового 52,56 (+3,98). Потрачено 95 из 100. ...",
     "strengths": [
-      "Наибольший рост оценки района — Нура: +3.78.",
-      "Рост оценки района Сарыарка: +1.65.",
+      "Наибольший рост оценки района — Нура: +3,78.",
+      "Рост оценки района Сарыарка: +1,65.",
       "Сработала синергия M10 + M12: B1 +2 в районе Нура.",
-      "Вклад M7 (Нура) в итог: +1.45 к Score по сравнению с тем же набором без этой меры.",
+      "Вклад M7 (Нура) в итог: +1,45 к Score по сравнению с тем же набором без этой меры.",
       "..."
     ],
     "risks": [
-      "Самый слабый район Нура (52.96) определяет 30% итогового балла.",
+      "Самый слабый район Нура (52,96) определяет 30% итогового балла.",
       "Меры с долгим лагом (M7, M8, M5) реализуют лишь часть эффекта за горизонт 8 кварталов."
     ],
     "recommendations": [
-      "Заменить M5 (Сарыарка) на M3 (Нура). При этой отдельной замене Score 57.21 (+0.67), расходы 100 из 100.",
-      "Заменить M5 (Сарыарка) на M14 (все районы). При этой отдельной замене Score 56.99 (+0.45), расходы 86 из 100.",
-      "Заменить M5 (Сарыарка) на M2 (все районы). При этой отдельной замене Score 56.88 (+0.34), расходы 92 из 100.",
+      "Заменить M5 (Сарыарка) на M3 (Нура). При этой отдельной замене Score 57,21 (+0,67), расходы 100 из 100.",
+      "Заменить M5 (Сарыарка) на M14 (все районы). При этой отдельной замене Score 56,99 (+0,45), расходы 86 из 100.",
+      "Заменить M5 (Сарыарка) на M2 (все районы). При этой отдельной замене Score 56,88 (+0,34), расходы 92 из 100.",
       "Варианты замен независимы и применяются по отдельности: их эффекты не суммируются."
     ]
   },
@@ -97,6 +97,8 @@ Response `200` for this request (actual output; `districts` shortened to Nura, t
 ```
 
 All four `explanation` fields are written by the server from computed numbers. `explanationSource` is `"llm"` when OpenAI set the priority order of `strengths` and `risks` and that order passed validation, otherwise `"mock"` (default server order). The shape and the set of sentences are the same in both cases; only the order of `strengths` and `risks` can differ.
+
+Numbers inside explanation text use the Russian decimal comma (`Нура (52,96)`, `+3,98`, `−1,75`), while all numeric JSON fields keep standard JSON numbers (`"score": 56.54`). The comma format is built with an explicit `NumberFormatInfo`, so it works with `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT` in Docker.
 
 `recommendations` are always built by the server, in both modes, from validated single-measure replacements (see "AI explanation"). Up to three items of the form `Заменить <id> (<district of the removed measure>) на <id> (<district of the new measure>).` — or `Перенести <id>: <from> → <to>.` when the same measure moves to another district — followed by `При этой отдельной замене Score <scoreAfter> (+<delta>), расходы <spent> из 100.` City measures are shown as `все районы`. The last item says that the replacements are independent and applied one at a time (their effects do not add up). If no single replacement improves Score, the only item is «Ни одна допустимая замена одной меры не повышает Score — отдельной заменой набор не улучшить.»
 
@@ -128,9 +130,9 @@ Environment variables (read by the API at startup; none is required to build or 
 
 Replacements (`Features/Simulation/ReplacementAdvisor.cs`): for every chosen measure the server tries every other catalog measure and the same measure in another district, runs the same validation as this endpoint (exactly 5, budget ≤ 100, ≤ 2 per category, district scope, incompatibilities), scores the set with `ScoreCalculator`, keeps only sets with a higher Score and the best district per pair. Each option knows the district of the removed measure and of the new one. Options are not a separate response field; `RecommendationBuilder` turns the top three into `recommendations` text.
 
-The request uses `POST /v1/responses` with `store: false` and Structured Outputs (`text.format.type = json_schema`, `strict: true`) whose schema is exactly `strengthOrder: string[]`, `riskOrder: string[]`, `additionalProperties: false`; array items are restricted by `enum` to the IDs of their own section. There is no free text in the model output.
+The request uses `POST /v1/responses` with `store: false` and Structured Outputs (`text.format.type = json_schema`, `strict: true`) whose schema is exactly `strengthOrder: string[]`, `riskOrder: string[]`, `additionalProperties: false`. Each array has `minItems = maxItems =` the number of claims in its section and items restricted by `enum` to that section's IDs; an empty section has `minItems = maxItems = 0` and no `enum`. There is no free text in the model output.
 
-Before the order is used the API checks: response status `completed`, no refusal, exactly these two fields, and each array is an exact permutation of its own section — no unknown IDs, no IDs from the other section, no duplicates, no omissions; an empty section accepts only `[]`. Otherwise the claims keep their default catalog order and `explanationSource` is `mock`. Because every sentence comes from the catalog, facts such as «Самый слабый район Нура (52.96)» cannot be altered by the model.
+Before the order is used the API checks: response status `completed`, no refusal, exactly these two fields, and each array is an exact permutation of its own section — no unknown IDs, no IDs from the other section, no duplicates, no omissions; an empty section accepts only `[]`. Otherwise the claims keep their default catalog order and `explanationSource` is `mock`. Because every sentence comes from the catalog, facts such as «Самый слабый район Нура (52,96)» cannot be altered by the model.
 
 The whole live analysis — all attempts and backoffs — has one 60 s deadline; when it expires the API immediately returns the `mock` explanation. Network errors and HTTP 408/409/429/5xx are retried at most twice within that deadline (backoff 1 s, 2 s). A request therefore waits at most about 60 s plus scoring time; a frontend request timeout of 75 s is enough. `score`, `districts` and all other numeric fields are identical in both modes. Logs contain attempt, HTTP status, elapsed time, token counts and the validation failure reason — no key, request body or model output.
 

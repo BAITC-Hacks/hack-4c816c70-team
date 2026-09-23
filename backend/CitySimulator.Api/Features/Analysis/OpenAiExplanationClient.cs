@@ -213,6 +213,10 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
         ["additionalProperties"] = false,
     };
 
+    /// <summary>
+    /// Array of exactly <c>claims.Count</c> IDs of this section. An empty section gets no enum (an empty enum is invalid)
+    /// and minItems = maxItems = 0. Uniqueness and completeness are still enforced by <see cref="ExplanationValidator"/>.
+    /// </summary>
     private static JsonObject IdArray(IReadOnlyList<Claim> claims)
     {
         var items = new JsonObject { ["type"] = "string" };
@@ -221,6 +225,12 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
             items["enum"] = new JsonArray(claims.Select(c => (JsonNode)JsonValue.Create(c.Id)!).ToArray());
         }
 
-        return new JsonObject { ["type"] = "array", ["items"] = items };
+        return new JsonObject
+        {
+            ["type"] = "array",
+            ["items"] = items,
+            ["minItems"] = claims.Count,
+            ["maxItems"] = claims.Count,
+        };
     }
 }
