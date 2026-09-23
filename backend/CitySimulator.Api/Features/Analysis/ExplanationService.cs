@@ -25,15 +25,13 @@ public sealed class ExplanationService(LlmOptions options, OpenAiExplanationClie
 
         if (options.IsLiveReady)
         {
-            var facts = AnalysisFacts.Build(choices, baseline, result, spent, alternatives);
-            // The model may only name chosen measures or server-validated replacements.
-            var allowedMeasureIds = choices.Select(c => c.Measure.Id)
-                .Concat(alternatives.Select(a => a.WithMeasureId))
-                .ToHashSet();
+            // The model writes summary/strengths/risks about the chosen set only; it never sees or phrases swaps.
+            var facts = AnalysisFacts.Build(choices, baseline, result, spent);
+            var allowedMeasureIds = choices.Select(c => c.Measure.Id).ToHashSet();
             var explanation = await client.TryExplainAsync(facts, allowedMeasureIds, cancellationToken);
             if (explanation is not null)
             {
-                return (explanation, ExplanationSource.Llm);
+                return (explanation with { Recommendations = RecommendationBuilder.Build(alternatives) }, ExplanationSource.Llm);
             }
         }
 

@@ -14,6 +14,24 @@
 
 После основного браузерного прогона backend-исполнитель обновил ключ в WSL и повторил эталонный запрос: Score 56.54, spent 95, explanationSource=llm. Координатор подтвердил в логе API: HTTP 200, статус completed, 8238 мс, одна попытка. Поэтому записи про 401 ниже описывают первоначальный прогон. Повторная проверка live в браузере ещё нужна. Выявлен отдельный дефект текста: модель приписала заменяемую M5 Нуре, хотя она выбрана в Сарыарке; район новой меры — Нура.
 
+## Исправление рекомендаций после браузерного прогона
+
+Рекомендации теперь собираются сервером с исходным и целевым районами; модель возвращает только summary, strengths и risks. Backend-исполнитель проверил перенос меры, городские меры, отсутствие улучшений и ответы заглушки. Последний live-эталон: Score 56.54, explanationSource=llm. Координатор подтвердил в логе HTTP 200, completed, 3901 мс. Внешний контракт сохраняет четыре поля explanation. Повторная браузерная проверка live и публичного POST ещё не выполнена.
+
+## Чистый клон `aafbf1a` в mock без ключа
+
+`git clone` в `/tmp/akim-repro/clean-aafbf1a`, `cp .env.example .env`, в `.env` изменены только `API_PORT=8081`, `FRONTEND_PORT=3001`, `NEXT_PUBLIC_API_URL=http://localhost:8081`. `LLM_MODE=mock`, `OPENAI_API_KEY` и `FRONTEND_ORIGIN` пустые. Запуск: `docker compose -p akim-repro up --build`. Основной стек `akim-5h` не затрагивался; после проверки выполнен `docker compose -p akim-repro down`.
+
+| Проверка | Факт |
+| --- | --- |
+| Сборка и старт | 38 с (образы из кэша), оба контейнера `healthy` |
+| Переменные API | `LLM_MODE=mock`, `OPENAI_*` пустые, `FRONTEND_ORIGIN=http://localhost:3001` (значение по умолчанию из `FRONTEND_PORT`); лог: `LLM mode=mock, apiKeyPresent=False, liveReady=False` |
+| `/health`, `/swagger/index.html` | `200`, `200` |
+| Эталонный `POST` (curl) | `200` за 0,17 с: spent 95, remaining 5, score 56.54, breakdown 58.08 / 52.96 / 0, 5 районов, синергия M10 + M12 в Нуре, `explanationSource: "mock"` |
+| Перерасход | `422` |
+| CORS для origin `http://localhost:3001` | `Access-Control-Allow-Origin: http://localhost:3001` |
+| Браузер на :3001 | Запросы идут на `http://localhost:8081`; результат 52,56 → 56,54, 95 / 5, подпись «Серверное объяснение по расчёту» |
+
 ## Результаты
 
 | # | Проверка | Результат | Факт |

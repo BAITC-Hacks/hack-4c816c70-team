@@ -12,15 +12,13 @@ public sealed record AnalysisFacts(
     IReadOnlyList<DistrictFacts> Districts,
     IReadOnlyList<MeasureFacts> Measures,
     IReadOnlyList<SynergyFacts> Synergies,
-    IReadOnlyList<CriticalValueFacts> CriticalValues,
-    IReadOnlyList<ReplacementOption> Alternatives)
+    IReadOnlyList<CriticalValueFacts> CriticalValues)
 {
     public static AnalysisFacts Build(
         IReadOnlyList<ValidatedChoice> choices,
         SimulationOutcome baseline,
         SimulationOutcome result,
-        int spent,
-        IReadOnlyList<ReplacementOption> alternatives)
+        int spent)
     {
         var r = ScoreCalculator.Round;
         // Deltas of already rounded values, so they match what the client displays (56.54 − 52.56 = 3.98).
@@ -82,7 +80,7 @@ public sealed record AnalysisFacts(
                 .Select(kv => new CriticalValueFacts(s.District.Name, kv.Key, indicatorNames[kv.Key], r(kv.Value))))
             .ToList();
 
-        return new AnalysisFacts(scenario, resultFacts, districts, measures, synergies, critical, alternatives);
+        return new AnalysisFacts(scenario, resultFacts, districts, measures, synergies, critical);
     }
 }
 

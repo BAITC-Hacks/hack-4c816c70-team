@@ -15,7 +15,8 @@ public static partial class ExplanationValidator
     public const int MaxItemLength = 500;
     public const int MaxItems = 8;
 
-    private static readonly string[] Fields = ["summary", "strengths", "risks", "recommendations"];
+    // Recommendations are built by the server (RecommendationBuilder), not by the model.
+    private static readonly string[] Fields = ["summary", "strengths", "risks"];
 
     // Small integers (counts, quarters, measure/indicator ordinals) and the formula weights in percent.
     private static readonly double[] AlwaysAllowed = [.. Enumerable.Range(0, 21).Select(i => (double)i), 30, 70, 100];
@@ -49,7 +50,7 @@ public static partial class ExplanationValidator
         var names = root.EnumerateObject().Select(p => p.Name).ToList();
         if (names.Count != Fields.Length || !Fields.All(names.Contains))
         {
-            reason = "output fields differ from summary/strengths/risks/recommendations";
+            reason = "output fields differ from summary/strengths/risks";
             return false;
         }
 
@@ -87,12 +88,12 @@ public static partial class ExplanationValidator
             lists[field] = items;
         }
 
-        var candidate = new Explanation(summary.GetString()!.Trim(), lists["strengths"], lists["risks"], lists["recommendations"]);
+        var candidate = new Explanation(summary.GetString()!.Trim(), lists["strengths"], lists["risks"], []);
         var texts = new[] { candidate.Summary }
-            .Concat(candidate.Strengths).Concat(candidate.Risks).Concat(candidate.Recommendations)
+            .Concat(candidate.Strengths).Concat(candidate.Risks)
             .ToList();
 
-        // Only chosen measures or server-validated replacements may be named.
+        // Only chosen measures may be named.
         var foreignMeasures = texts
             .SelectMany(t => MeasureIdPattern().Matches(t).Select(m => "M" + m.Groups[1].Value))
             .Where(id => !allowedMeasureIds.Contains(id))
@@ -100,7 +101,7 @@ public static partial class ExplanationValidator
             .Count();
         if (foreignMeasures > 0)
         {
-            reason = $"text names {foreignMeasures} measure(s) that are neither chosen nor validated alternatives";
+            reason = $"text names {foreignMeasures} measure(s) that were not chosen";
             return false;
         }
 
@@ -109,10 +110,12 @@ public static partial class ExplanationValidator
             .SelectMany(ExtractNumbers)
             .Where(n => !allowed.Any(a => Math.Abs(a - n) < 0.0005))
             .Distinct()
-            .Count();
-        if (unknown > 0)
+            .ToList();
+        if (unknown.Count > 0)
         {
-            reason = $"text contains {unknown} number(s) not present in computed facts";
+            // Numbers alone are safe to log; the model text itself is never logged.
+            reason = $"text contains {unknown.Count} number(s) not present in computed facts: " +
+                     string.Join(", ", unknown.Take(5).Select(n => n.ToString(CultureInfo.InvariantCulture)));
             return false;
         }
 
