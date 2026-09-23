@@ -11,6 +11,9 @@
 | React and React DOM 19.2.8 | MIT | User interface | https://github.com/facebook/react |
 | Three.js 0.186.0 | MIT | Frontend 3D city rendering support | https://github.com/mrdoob/three.js |
 | @types/three 0.186.0 | MIT | TypeScript definitions for Three.js, development dependency | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/three |
+| @types/node 20.x | MIT | Node.js TypeScript definitions, development dependency | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node |
+| @types/react 19.x | MIT | React TypeScript definitions, development dependency | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react |
+| @types/react-dom 19.x | MIT | React DOM TypeScript definitions, development dependency | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom |
 | TypeScript 5.x | Apache-2.0 | Frontend type checking | https://github.com/microsoft/TypeScript |
 | ESLint 9.x and eslint-config-next | MIT | Frontend linting | https://github.com/eslint/eslint |
 | create-next-app | MIT | Initial frontend scaffold | https://github.com/vercel/next.js/tree/canary/packages/create-next-app |
