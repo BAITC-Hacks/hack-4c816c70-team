@@ -1,5 +1,5 @@
-using System.Globalization;
 using CitySimulator.Api.Features.Scenario;
+using static CitySimulator.Api.Features.Simulation.TextNumberFormat;
 
 namespace CitySimulator.Api.Features.Simulation;
 
@@ -23,7 +23,8 @@ public static class ExplanationBuilder
         ClaimCatalog catalog,
         IReadOnlyList<string> strengthOrder,
         IReadOnlyList<string> riskOrder,
-        IReadOnlyList<ReplacementOption> alternatives)
+        IReadOnlyList<ReplacementOption> alternatives,
+        string locale = ExplanationLocales.Russian)
     {
         var strengths = catalog.Strengths.ToDictionary(c => c.Id, c => c.Text);
         var risks = catalog.Risks.ToDictionary(c => c.Id, c => c.Text);
@@ -31,22 +32,22 @@ public static class ExplanationBuilder
             catalog.Summary,
             strengthOrder.Select(id => strengths[id]).ToList(),
             riskOrder.Select(id => risks[id]).ToList(),
-            RecommendationBuilder.Build(alternatives));
+            RecommendationBuilder.Build(alternatives, locale));
     }
 
     public static ClaimCatalog BuildCatalog(
         IReadOnlyList<ValidatedChoice> choices,
         SimulationOutcome baseline,
         SimulationOutcome result,
-        int spent)
+        int spent,
+        string locale = ExplanationLocales.Russian)
     {
         var weakest = Weakest(result);
         var delta = ScoreCalculator.Round(result.Score) - ScoreCalculator.Round(baseline.Score);
-        var summary =
-            $"Итоговый Score {F(result.Score)} против базового {F(baseline.Score)} ({Signed(delta)}). " +
-            $"Потрачено {spent} из {ScenarioData.Budget}. " +
-            $"Средневзвешенная оценка районов {F(result.AverageScore)}, самый слабый район — {weakest.District.Name} ({F(result.MinDistrictScore)}), " +
-            $"критических значений ниже {F(ScenarioData.CriticalThreshold)}: {result.CriticalCount}.";
+        var summary = ExplanationText.Format(locale, "summary",
+            F(result.Score, locale), F(baseline.Score, locale), Signed(delta, locale), spent, ScenarioData.Budget,
+            F(result.AverageScore, locale), ExplanationText.DistrictName(weakest.District.Id, locale),
+            F(result.MinDistrictScore, locale), F(ScenarioData.CriticalThreshold, locale), result.CriticalCount);
 
         var strengths = new List<Claim>();
 
@@ -62,12 +63,14 @@ public static class ExplanationBuilder
             var leaders = gains.Where(x => x.Gain == gains[0].Gain).ToList();
             strengths.Add(leaders.Count == 1
                 ? new Claim($"gain_{leaders[0].District.Id}",
-                    $"Наибольший рост оценки района — {leaders[0].District.Name}: {Signed(leaders[0].Gain)}.")
+                    ExplanationText.Format(locale, "leading_gain", ExplanationText.DistrictName(leaders[0].District.Id, locale), Signed(leaders[0].Gain, locale)))
                 : new Claim($"gain_leaders",
-                    $"Наибольший рост оценки района, одинаковый ({Signed(leaders[0].Gain)}), — у районов {string.Join(", ", leaders.Select(x => x.District.Name))}."));
+                    ExplanationText.Format(locale, "tied_gain", Signed(leaders[0].Gain, locale),
+                        string.Join(", ", leaders.Select(x => ExplanationText.DistrictName(x.District.Id, locale))))));
             foreach (var (district, gain) in gains.Skip(leaders.Count).Take(MaxDistrictGainClaims - 1))
             {
-                strengths.Add(new Claim($"gain_{district.Id}", $"Рост оценки района {district.Name}: {Signed(gain)}."));
+                strengths.Add(new Claim($"gain_{district.Id}", ExplanationText.Format(locale, "district_gain",
+                    ExplanationText.DistrictName(district.Id, locale), Signed(gain, locale))));
             }
         }
 
@@ -75,46 +78,49 @@ public static class ExplanationBuilder
         {
             strengths.Add(new Claim(
                 $"synergy_{string.Join("_", synergy.MeasureIds)}",
-                $"Сработала синергия {string.Join(" + ", synergy.MeasureIds)}: {synergy.IndicatorId} {Signed(synergy.Delta)} в районе {DistrictName(synergy.DistrictId)}."));
+                ExplanationText.Format(locale, "synergy", string.Join(" + ", synergy.MeasureIds),
+                    synergy.IndicatorId, Signed(synergy.Delta, locale), ExplanationText.DistrictName(synergy.DistrictId, locale))));
         }
 
         if (result.CriticalCount < baseline.CriticalCount)
         {
             strengths.Add(new Claim("critical_reduced",
-                $"Критических значений стало меньше: {baseline.CriticalCount} → {result.CriticalCount} (каждое стоит −1 балл)."));
+                ExplanationText.Format(locale, "critical_reduced", baseline.CriticalCount, result.CriticalCount)));
         }
 
         var risks = new List<Claim>();
         foreach (var (district, indicatorId, value) in CriticalValues(result))
         {
             risks.Add(new Claim($"critical_{district.Id}_{indicatorId}",
-                $"В районе {district.Name} показатель {indicatorId} остаётся ниже порога: {F(value)}."));
+                ExplanationText.Format(locale, "critical_risk", ExplanationText.DistrictName(district.Id, locale),
+                    indicatorId, F(value, locale))));
         }
 
         risks.Add(new Claim("weakest_district",
-            $"Самый слабый район {weakest.District.Name} ({F(weakest.Score)}) определяет 30% итогового балла."));
+            ExplanationText.Format(locale, "weakest_district", ExplanationText.DistrictName(weakest.District.Id, locale),
+                F(weakest.Score, locale))));
 
         var slowMeasures = choices.Where(c => c.Measure.LagQuarters >= 3).Select(c => c.Measure.Id).ToList();
         if (slowMeasures.Count > 0)
         {
             risks.Add(new Claim("long_lag",
-                $"Меры с долгим лагом ({string.Join(", ", slowMeasures)}) реализуют лишь часть эффекта за горизонт {ScenarioData.HorizonQuarters} кварталов."));
+                ExplanationText.Format(locale, "long_lag", string.Join(", ", slowMeasures), ScenarioData.HorizonQuarters)));
         }
 
         // Leave-one-out contribution of every chosen measure: positive ones are strengths, the rest are risks.
         foreach (var choice in choices.OrderBy(c => int.Parse(c.Measure.Id.AsSpan(1))))
         {
             var impact = ScoreCalculator.Round(ScoreCalculator.ScoreImpact(choices, choice, result.Score));
-            var where = choice.District?.Name ?? ReplacementAdvisor.CityWide;
+            var where = ExplanationText.DistrictName(choice.District?.Id, locale);
             if (impact > 0)
             {
                 strengths.Add(new Claim($"impact_{choice.Measure.Id}",
-                    $"Вклад {choice.Measure.Id} ({where}) в итог: {Signed(impact)} к Score по сравнению с тем же набором без этой меры."));
+                    ExplanationText.Format(locale, "impact", choice.Measure.Id, where, Signed(impact, locale))));
             }
             else
             {
                 risks.Add(new Claim($"low_impact_{choice.Measure.Id}",
-                    $"{choice.Measure.Id} ({where}) не повышает Score: {Signed(impact)} по сравнению с тем же набором без этой меры."));
+                    ExplanationText.Format(locale, "low_impact", choice.Measure.Id, where, Signed(impact, locale))));
             }
         }
 
@@ -128,10 +134,4 @@ public static class ExplanationBuilder
             .Where(kv => kv.Value < ScenarioData.CriticalThreshold)
             .Select(kv => (s.District, kv.Key, kv.Value)));
 
-    private static string DistrictName(string id) => ScenarioData.DistrictsById[id].Name;
-
-    private static string F(double value) =>
-        ScoreCalculator.Round(value).ToString("0.##", CultureInfo.InvariantCulture);
-
-    private static string Signed(double value) => (value >= 0 ? "+" : "−") + F(Math.Abs(value));
 }

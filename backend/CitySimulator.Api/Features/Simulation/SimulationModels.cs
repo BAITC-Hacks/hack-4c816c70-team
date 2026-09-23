@@ -32,7 +32,8 @@ public sealed record EvaluateResponse(
     IReadOnlyList<DistrictResult> Districts,
     IReadOnlyList<AppliedSynergy> AppliedSynergies,
     Explanation Explanation,
-    string ExplanationSource);
+    string ExplanationSource,
+    string ExplanationLocale);
 
 public sealed record ApiError(string Code, string Message);
 
