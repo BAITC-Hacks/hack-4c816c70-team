@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { DistrictId } from "@/lib/contracts/ui";
-import { cx } from "@/components/ui";
-import { AtlasSketch } from "./AtlasSketch";
+import { Button, cx } from "@/components/ui";
 import { useCityCopy } from "./use-city-copy";
 import type { CitySceneHandle } from "./city-scene-engine";
 import styles from "./city-scene.module.css";
@@ -14,34 +13,29 @@ export interface CitySceneProps {
   readonly onSelectDistrict: (districtId: DistrictId) => void;
 }
 
-/** 3D только на достаточно мощном устройстве с WebGL и шириной от 900 px. */
-let capability: boolean | null = null;
+const WIDE_QUERY = "(min-width: 900px)";
+/** Hardware hints may be privacy-limited. Let the real renderer determine support. */
 function canRender3D(): boolean {
-  if (capability !== null) return capability;
-  try {
-    const nav = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
-    const weak =
-      (nav.deviceMemory !== undefined && nav.deviceMemory <= 2) ||
-      (nav.hardwareConcurrency !== undefined && nav.hardwareConcurrency <= 2) ||
-      nav.connection?.saveData === true;
-    const wide = window.matchMedia("(min-width: 900px)").matches;
-    const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
-    gl?.getExtension("WEBGL_lose_context")?.loseContext();
-    capability = !weak && wide && gl !== null;
-  } catch {
-    capability = false;
-  }
-  return capability;
+  const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
+  return window.matchMedia(WIDE_QUERY).matches && nav.connection?.saveData !== true;
 }
-const noopSubscribe = () => () => {};
+function subscribeCapability(onChange: () => void) {
+  const media = window.matchMedia(WIDE_QUERY);
+  const connection = (navigator as Navigator & { connection?: EventTarget }).connection;
+  media.addEventListener("change", onChange);
+  connection?.addEventListener("change", onChange);
+  return () => {
+    media.removeEventListener("change", onChange);
+    connection?.removeEventListener("change", onChange);
+  };
+}
 const serverCapability = () => false;
 
 type SceneStatus = "loading" | "ready" | "failed";
 
 /**
  * Схематичная 3D-миниатюра. Пока сцена грузится, при ошибке, без WebGL,
- * на узком экране или слабом устройстве показывается статичная схема.
+ * на узком экране или при экономии трафика показывается снимок самой модели.
  * Выбор района доступен и обычными кнопками в разделе «Районы».
  */
 export function CityScene({ districtIds, selectedDistrictId, onSelectDistrict }: CitySceneProps) {
@@ -50,8 +44,10 @@ export function CityScene({ districtIds, selectedDistrictId, onSelectDistrict }:
   const onSelectRef = useRef(onSelectDistrict);
   const selectedRef = useRef(selectedDistrictId);
   const [status, setStatus] = useState<SceneStatus>("loading");
+  const [attempt, setAttempt] = useState(0);
   const { copy } = useCityCopy();
-  const enabled = useSyncExternalStore(noopSubscribe, canRender3D, serverCapability);
+  const automatic = useSyncExternalStore(subscribeCapability, canRender3D, serverCapability);
+  const enabled = automatic || attempt > 0;
   const idsKey = districtIds.join("|");
 
   useEffect(() => {
@@ -99,7 +95,7 @@ export function CityScene({ districtIds, selectedDistrictId, onSelectDistrict }:
       engine?.dispose();
       engineRef.current = null;
     };
-  }, [enabled, idsKey]);
+  }, [enabled, idsKey, attempt]);
 
   useEffect(() => {
     engineRef.current?.setSelected(selectedDistrictId);
@@ -111,14 +107,21 @@ export function CityScene({ districtIds, selectedDistrictId, onSelectDistrict }:
     <figure className={styles.scene}>
       <div className={styles.stage}>
         <div ref={hostRef} className={cx(styles.canvasHost, showScene && styles.canvasVisible)} />
-        <div className={cx(styles.fallback, showScene && styles.fallbackHidden)} aria-hidden="true">
-          <AtlasSketch />
-        </div>
+        <div className={cx(styles.fallback, showScene && styles.fallbackHidden)} aria-hidden="true" />
       </div>
       {/* Подпись постоянная: смена текста при загрузке сцены сдвигала блок ниже */}
       <figcaption className={styles.caption}>
         {copy.sceneCaption}
       </figcaption>
+      <div className={styles.status} aria-live="polite">
+        {!showScene && <>
+          <p>{!enabled ? copy.scenePaused : status === "failed" ? copy.sceneFailed : copy.sceneLoading}</p>
+          {(!enabled || status === "failed") && <Button variant="secondary" onClick={() => {
+            setStatus("loading");
+            setAttempt((value) => value + 1);
+          }}>{copy.sceneRetry}</Button>}
+        </>}
+      </div>
     </figure>
   );
 }

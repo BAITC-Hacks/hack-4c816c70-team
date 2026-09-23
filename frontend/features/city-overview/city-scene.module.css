@@ -31,7 +31,21 @@
   align-items: center;
   transition: opacity 400ms var(--ease-standard);
   pointer-events: none;
+  background: url("/city/preview-day.png") center / contain no-repeat;
 }
+
+:global([data-theme="dark"]) .fallback {
+  background-image: url("/city/preview-night.png");
+}
+
+.status {
+  min-height: 5rem;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  text-align: right;
+}
+
+.status p { margin: 0 0 var(--space-2); }
 
 .fallbackHidden {
   opacity: 0;

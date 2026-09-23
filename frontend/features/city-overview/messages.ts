@@ -41,6 +41,10 @@ export interface CityMessages {
   readonly finalText: (selectedName: string | null) => string;
   // 3D и схема
   readonly sceneCaption: string;
+  readonly sceneLoading: string;
+  readonly scenePaused: string;
+  readonly sceneFailed: string;
+  readonly sceneRetry: string;
   readonly atlasLabel: string;
   readonly atlasCaption: (indicatorCount: number, threshold: string) => string;
   readonly atlasHidden: (count: number) => string;
@@ -103,6 +107,10 @@ const ruMessages: CityMessages = {
   finalText: (name) =>
     `${name ? `Район «${name}» уже предложен для районных мер.` : "Район для каждой меры выбирается прямо в её карточке."} Черновик плана сохранится, пока вы переходите между страницами.`,
   sceneCaption: "Схематичная визуализация города: расположение и высота зданий условные.",
+  sceneLoading: "Загружаем 3D-город. Пока показан снимок модели.",
+  scenePaused: "Показан снимок модели. Интерактивный 3D-город можно включить вручную.",
+  sceneFailed: "Не удалось запустить 3D в этом браузере. Показан снимок модели; выбор районов доступен ниже.",
+  sceneRetry: "Запустить 3D",
   atlasLabel: "Схема районов",
   atlasCaption: (n, t) =>
     `Условная схема: в данных нет географических границ, форма и положение областей не соответствуют карте. Столбики — ${n} ${ru(n, "исходный показатель", "исходных показателя", "исходных показателей")} района на шкале 0–100, пунктир — критический порог ${t}; красным отмечены значения ниже порога.`,
@@ -169,6 +177,10 @@ const kkMessages: CityMessages = {
   finalText: (name) =>
     `${name ? `«${name}» ауданы аудандық шараларға ұсынылды.` : "Әр шараның ауданы оның карточкасында таңдалады."} Беттер арасында ауысқанда жоспардың жобасы сақталады.`,
   sceneCaption: "Қаланың сызбалық бейнесі: нысандардың орны мен ғимараттардың биіктігі шартты.",
+  sceneLoading: "3D қала жүктелуде. Әзірге модельдің суреті көрсетілген.",
+  scenePaused: "Модельдің суреті көрсетілген. Интерактивті 3D қаланы қолмен қосуға болады.",
+  sceneFailed: "Бұл браузерде 3D іске қосылмады. Модельдің суреті көрсетілген; ауданды төменде таңдауға болады.",
+  sceneRetry: "3D іске қосу",
   atlasLabel: "Аудандар сызбасы",
   atlasCaption: (n, t) =>
     `Шартты сызба: деректерде географиялық шекара жоқ, аймақтардың пішіні мен орны картаға сәйкес келмейді. Бағандар — ауданның 0–100 шкаласындағы ${n} бастапқы көрсеткіші, пунктир — ${t} сындық шегі; шектен төмен мәндер қызылмен белгіленген.`,
@@ -234,6 +246,10 @@ const enMessages: CityMessages = {
   finalText: (name) =>
     `${name ? `${name} is already suggested for district measures.` : "Each measure's district is chosen on its own card."} Your draft plan is kept while you move between pages.`,
   sceneCaption: "Schematic city view: building positions and heights are illustrative.",
+  sceneLoading: "Loading the 3D city. A snapshot of the model is shown for now.",
+  scenePaused: "A snapshot of the model is shown. You can start the interactive 3D city manually.",
+  sceneFailed: "Could not start 3D in this browser. A snapshot is shown; district controls remain available below.",
+  sceneRetry: "Start 3D",
   atlasLabel: "District map",
   atlasCaption: (n, t) =>
     `Illustrative map: the data has no geographic boundaries, so shapes and positions do not match a real map. Bars show the district's ${n} baseline indicators on a 0–100 scale, the dashed line marks the critical threshold of ${t}, and values below it are red.`,
