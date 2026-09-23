@@ -52,6 +52,32 @@ public sealed class ApiExamplesFilter : IOperationFilter
                 ["overBudget"] = Error([Control[0], Control[1], new("M13", "almaty"), Control[3], Control[4]]),
             };
         }
+        else if (context.ApiDescription.RelativePath == "api/simulations/alternatives")
+        {
+            var (choices, _) = ChoiceValidator.Validate(new EvaluateRequest(Control));
+            var search = AlternativeSearch.Run(choices!);
+            operation.RequestBody!.Content!["application/json"].Examples = AlternativeGoals.All.ToDictionary(goal => goal,
+                goal => (IOpenApiExample)Example(new AlternativesRequest(Control, goal), $"Контрольный набор, goal={goal}"));
+            ResponseMedia(operation, "200").Examples = AlternativeGoals.All.ToDictionary(goal => goal,
+                goal => (IOpenApiExample)Example(AlternativeAdviceService.BuildResponse(search, goal, ExplanationLocales.Russian),
+                    $"Контрольный набор, goal={goal}, mock (ru-RU)"));
+            ResponseMedia(operation, "400").Examples = new Dictionary<string, IOpenApiExample>
+            {
+                ["invalidGoal"] = AlternativesError(new AlternativesRequest(Control, "fastest")),
+                ["wrongCount"] = AlternativesError(new AlternativesRequest(Control.Take(4).ToArray(), AlternativeGoals.Score)),
+            };
+            ResponseMedia(operation, "422").Examples = new Dictionary<string, IOpenApiExample>
+            {
+                ["overBudget"] = AlternativesError(new AlternativesRequest(
+                    [Control[0], Control[1], new("M13", "almaty"), Control[3], Control[4]], AlternativeGoals.Economy)),
+            };
+        }
+    }
+
+    private static OpenApiExample AlternativesError(AlternativesRequest request)
+    {
+        var (_, failure) = SimulationEndpoints.ValidateAlternatives(request);
+        return Example(new ErrorResponse(new ApiError(failure!.Code, failure.Message)), failure.Code);
     }
 
     private static OpenApiMediaType ResponseMedia(OpenApiOperation operation, string status) =>

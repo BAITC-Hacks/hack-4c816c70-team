@@ -31,6 +31,7 @@ builder.Services.AddHttpClient<OpenAiExplanationClient>(client =>
     client.Timeout = Timeout.InfiniteTimeSpan;
 });
 builder.Services.AddScoped<ExplanationService>();
+builder.Services.AddScoped<AlternativeAdviceService>();
 
 var app = builder.Build();
 
