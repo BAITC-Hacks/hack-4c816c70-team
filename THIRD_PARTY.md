@@ -16,6 +16,8 @@
 | .NET Docker images `dotnet/sdk:8.0-alpine`, `dotnet/aspnet:8.0-alpine` | MIT | Backend build and runtime container | https://github.com/dotnet/dotnet-docker |
 | Alpine Linux (base of the images above) | Per package, mainly MIT and GPL-2.0 | Container base OS, used unmodified | https://alpinelinux.org |
 | Docker Compose | Apache-2.0 | One-command launch (tool, not bundled) | https://github.com/docker/compose |
+| Nginx 1.30.5, image `nginx:1.30.5-alpine` | BSD-2-Clause | Optional same-origin reverse proxy for Brev deployment | https://nginx.org / https://github.com/nginx/docker-nginx |
+| NVIDIA Brev; Brev CLI 0.6.335 | Hosted proprietary service; CLI MIT | Existing server hosting, SSH and HTTPS Secure Links; not required for local launch | https://docs.nvidia.com/brev / https://github.com/brevdev/brev-cli |
 | Cloudflare cloudflared 2026.9.1 | Apache-2.0 | Temporary development access to the API through a tunnel; not an application runtime dependency | https://github.com/cloudflare/cloudflared |
 | Challenge task and synthetic district dataset | Provided by the organizers as task materials; license not specified | Requirements, districts, indicators, measures and scoring rules | `docs/reference/` |
 
