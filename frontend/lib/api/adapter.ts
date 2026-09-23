@@ -131,7 +131,9 @@ export function parseEvaluationDto(value: unknown): ApiEvaluationDto {
   });
   const explanation = expectRecord(root.explanation, "explanation");
   const stringList = (value: unknown, path: string) => expectArray(value, path).map((entry, index) => expectString(entry, `${path}[${index}]`));
-  return { spent: expectNumber(root.spent, "spent"), remaining: expectNumber(root.remaining, "remaining"), baselineScore: expectNumber(root.baselineScore, "baselineScore"), score: expectNumber(root.score, "score"), districts, appliedSynergies, explanation: { summary: expectString(explanation.summary, "explanation.summary"), strengths: stringList(explanation.strengths, "explanation.strengths"), risks: stringList(explanation.risks, "explanation.risks"), recommendations: stringList(explanation.recommendations, "explanation.recommendations") } };
+  const explanationSource = expectString(root.explanationSource, "explanationSource");
+  if (explanationSource !== "llm" && explanationSource !== "mock") throw new ApiContractError("Некорректный ответ API: неизвестный источник объяснения.");
+  return { spent: expectNumber(root.spent, "spent"), remaining: expectNumber(root.remaining, "remaining"), baselineScore: expectNumber(root.baselineScore, "baselineScore"), score: expectNumber(root.score, "score"), districts, appliedSynergies, explanation: { summary: expectString(explanation.summary, "explanation.summary"), strengths: stringList(explanation.strengths, "explanation.strengths"), risks: stringList(explanation.risks, "explanation.risks"), recommendations: stringList(explanation.recommendations, "explanation.recommendations") }, explanationSource };
 }
 
 export function evaluationToVm(dto: ApiEvaluationDto): EvaluationVM {
@@ -141,5 +143,5 @@ export function evaluationToVm(dto: ApiEvaluationDto): EvaluationVM {
     return { ...district, indicatorsBefore: district.indicatorsBefore as IndicatorValues, indicatorsAfter: district.indicatorsAfter as IndicatorValues, scoreDelta: district.scoreAfter - district.scoreBefore, indicatorDeltas };
   });
   const appliedSynergies: AppliedSynergyVM[] = dto.appliedSynergies.map((item) => ({ ...item, measureIds: item.measureIds, indicatorId: item.indicatorId as IndicatorId }));
-  return { spent: dto.spent, remaining: dto.remaining, baselineScore: dto.baselineScore, score: dto.score, scoreDelta: dto.score - dto.baselineScore, districts, appliedEffects: null, appliedSynergies, explanation: dto.explanation, source: "api" };
+  return { spent: dto.spent, remaining: dto.remaining, baselineScore: dto.baselineScore, score: dto.score, scoreDelta: dto.score - dto.baselineScore, districts, appliedEffects: null, appliedSynergies, explanation: dto.explanation, explanationSource: dto.explanationSource, source: "api" };
 }

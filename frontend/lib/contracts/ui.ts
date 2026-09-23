@@ -175,6 +175,8 @@ export interface EvaluationVM {
   readonly appliedEffects: readonly AppliedEffectVM[] | null;
   readonly appliedSynergies: readonly AppliedSynergyVM[];
   readonly explanation: ExplanationVM;
+  /** Origin of explanation text as reported by the backend; it never affects numbers. */
+  readonly explanationSource: "llm" | "mock";
   readonly source: "api" | "fixture";
 }
 

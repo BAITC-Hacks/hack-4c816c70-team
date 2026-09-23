@@ -18,6 +18,7 @@ GPT-интегратор. Основной commit: `a6afa83 feat(frontend): inte
 - DTO валидируются до адаптации в UI-модели. Нет rewrite, `API_INTERNAL_URL`, LLM-вызовов или автоматического fixture fallback.
 - City-мере payload не добавляет `districtId`; 400/422 сохраняют choices; pending блокирует редактирование и двойной submit; late response после reset игнорируется.
 - `appliedEffects` принудительно `null`; блок не рендерится. Дельты — только `after - before` из ответа API.
+- После обновления `origin/main`: адаптируется и показывается `explanationSource` (`llm`/`mock`); таймаут evaluate увеличен до 75 секунд, чтобы не обрывать допустимый live-ответ сервера с 60-секундным fallback.
 - `fixtureScenario` — отдельный полный fixture с `source: "fixture"`; production flow его не выбирает.
 - `CityOverview` и `Planner` подключены только через их публичные exports.
 - У каждого готового шага один `<main>`; после получения результата фокус переходит на `h1` «Ваш план оценён».

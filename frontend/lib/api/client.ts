@@ -5,7 +5,8 @@ import { ApiClientError, normalizeApiError } from "./errors";
 import type { ApiErrorKind } from "./errors";
 
 const DEFAULT_API_URL = "http://localhost:8080";
-const REQUEST_TIMEOUT_MS = 15_000;
+/** Live server explanation can take up to 60 seconds; leave transport headroom. */
+const REQUEST_TIMEOUT_MS = 75_000;
 
 export { ApiClientError } from "./errors";
 

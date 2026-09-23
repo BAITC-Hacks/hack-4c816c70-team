@@ -94,6 +94,7 @@ export interface ApiEvaluationDto {
   districts: ApiDistrictResultDto[];
   appliedSynergies: ApiAppliedSynergyDto[];
   explanation: ApiExplanationDto;
+  explanationSource: "llm" | "mock";
 }
 
 export interface ApiErrorDto {
