@@ -11,7 +11,7 @@ Claude 2. Commit не создавался: по договорённости gi
 ```text
 features/planner/index.ts                 # публичные exports
 features/planner/selection-rules.ts       # validateDraft + доступность действий + иммутабельные операции над черновиком
-features/planner/selection-rules.test.ts  # 28 тестов пограничных правил (node:test)
+features/planner/selection-rules.test.ts  # 31 тест пограничных правил (node:test)
 features/planner/labels.ts                # подписи направлений, форматирование ru-RU только для вывода
 features/planner/Planner.tsx              # "use client", композиция, локальное состояние формы
 features/planner/MeasureCard.tsx          # карточка меры
@@ -74,7 +74,7 @@ import { Planner, validateDraft } from "@/features/planner";
 | --- | --- |
 | `npm run lint` | exit 0, без замечаний |
 | `npm run typecheck` (`tsc --noEmit`) | exit 0 |
-| `npm test` (script GPT: `tsc -p tsconfig.test.json` + `node --test`) | 32 теста, 32 pass, 0 fail; из них 28 — `selection-rules.test.ts` |
+| `npm test` (script GPT: `tsc -p tsconfig.test.json` + `node --test`) | 35 тестов, 35 pass, 0 fail; из них 31 — `selection-rules.test.ts` |
 | `next build` | **в общем `frontend/` не запускался**: там параллельно работал чужой dev-сервер на :3107, и я не стал пересобирать `.next`. Production build прошёл в изолированной копии (scratchpad: `features/planner` + `components/ui` + `styles` + `lib/contracts`): «Compiled successfully», TypeScript ок. |
 
 Тесты (`selection-rules.test.ts`, fixture явно помечен как тестовый, цены условные):
@@ -87,7 +87,15 @@ import { Planner, validateDraft } from "@/features/planner";
 - M1 Нура + M3 Есиль — глобальный конфликт; M4 + M7 в Нуре — конфликт, в разных районах — нет; M5 + M13 в Сарыарке — конфликт, в Сарыарке и Алматы — нет;
 - смена района создаёт и снимает конфликт; незавершённые меры не дают ложного конфликта;
 - `rules: null` → только `rules-unavailable`;
-- доступность: глобальный конфликт блокирует карточку; районный — только район; третья мера направления, бюджет, 5 из 5; удаление освобождает карточку; синергия только как пара.
+- доступность: глобальный конфликт блокирует карточку; районный — только район; район, заранее выбранный в карточке, блокирует добавление при конфликте, другой район или «без района» — нет; неизвестный район-кандидат блокирует; у city-меры район-кандидат игнорируется; третья мера направления, бюджет, 5 из 5; удаление освобождает карточку; синергия только как пара.
+
+## Исправление после ревью: заранее выбранный район
+
+Дефект: в карточке M7 вручную выбрана Нура, затем M4 добавлена в Нуру. Кнопка «Добавить» у M7 оставалась активной, и M7 сохранялась с конфликтующим назначением. Причина: `getAddAvailability` не учитывала район, выбранный в карточке до добавления.
+
+Исправление: `getAddAvailability(scenario, choices, measureId, districtId = "")` теперь принимает этот район. Если назначение конфликтует («В районе «Нура» уже выбрана M4. … Выберите другой район.») или район неизвестен, добавление блокируется. Для city-меры район игнорируется, «без района» по-прежнему допустимо. `Planner` передаёт этот район и в отображение карточки, и в проверку внутри `handleAdd`. Select остаётся доступным: смена района сразу снимает блокировку.
+
+Проверено в harness: Нура для M7 → M4 в Нуру → кнопка M7 disabled, причина видна текстом и связана через `aria-describedby`, клик не меняет payload. После смены на Есиль кнопка активна, payload — `[{M4, nura}, {M7, yesil}]`. Lint, typecheck и `npm test` (35/35) проходят.
 
 ## Проверка в браузере
 
