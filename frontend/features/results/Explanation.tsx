@@ -1,11 +1,23 @@
+import { Button } from "@/components/ui";
 import type { EvaluationVM } from "@/lib/contracts/ui";
-import { useLocale } from "@/lib/i18n";
+import { intlLocales, useLocale } from "@/lib/i18n";
 import { resultMessages } from "./messages";
 import styles from "./results.module.css";
 
-export function Explanation({ explanation, source }: { readonly explanation: EvaluationVM["explanation"]; readonly source: EvaluationVM["explanationSource"] }) {
+/** Native names, so the notice names the language the text is actually written in. */
+const languageNames: Record<EvaluationVM["explanationLocale"], string> = { "ru-RU": "Русский", "kk-KZ": "Қазақша", "en-US": "English" };
+
+export function Explanation({ explanation, source, explanationLocale, onReevaluate, isReevaluating = false }: {
+  readonly explanation: EvaluationVM["explanation"];
+  readonly source: EvaluationVM["explanationSource"];
+  readonly explanationLocale: EvaluationVM["explanationLocale"];
+  readonly onReevaluate?: () => void;
+  readonly isReevaluating?: boolean;
+}) {
   const { locale } = useLocale();
   const copy = resultMessages[locale];
+  // The server text stays in the language it was produced in; switching UI language never relabels it.
+  const isStale = explanationLocale !== intlLocales[locale];
   const sections = [[copy.strengths, "strengths"], [copy.risks, "risks"], [copy.recommendations, "recommendations"]] as const;
-  return <section className={styles.explanation}><h2>{copy.explanation}</h2><p className={styles.explanationSource}>{copy.source[source]}</p>{copy.explanationRussianOnly ? <p>{copy.explanationRussianOnly}</p> : null}<p>{explanation.summary}</p>{sections.map(([title, key]) => <div key={key}><h3>{title}</h3>{explanation[key].length > 0 ? <ul>{explanation[key].map((item) => <li key={item}>{item}</li>)}</ul> : <p>{copy.none}</p>}</div>)}</section>;
+  return <section className={styles.explanation}><h2>{copy.explanation}</h2><p className={styles.explanationSource}>{copy.source[source]}</p>{isStale ? <div role="status"><p>{copy.staleExplanation(languageNames[explanationLocale])}</p>{onReevaluate ? <Button onClick={onReevaluate} busy={isReevaluating}>{isReevaluating ? copy.reevaluating : copy.reevaluate}</Button> : null}</div> : null}<p lang={explanationLocale}>{explanation.summary}</p>{sections.map(([title, key]) => <div key={key}><h3>{title}</h3>{explanation[key].length > 0 ? <ul lang={explanationLocale}>{explanation[key].map((item) => <li key={item}>{item}</li>)}</ul> : <p>{copy.none}</p>}</div>)}</section>;
 }

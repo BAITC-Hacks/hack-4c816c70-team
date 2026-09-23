@@ -86,6 +86,9 @@ export interface ApiExplanationDto {
   recommendations: string[];
 }
 
+/** Canonical language of the explanation text; also sent back as Content-Language. */
+export type ApiExplanationLocale = "ru-RU" | "kk-KZ" | "en-US";
+
 export interface ApiEvaluationDto {
   spent: number;
   remaining: number;
@@ -95,6 +98,7 @@ export interface ApiEvaluationDto {
   appliedSynergies: ApiAppliedSynergyDto[];
   explanation: ApiExplanationDto;
   explanationSource: "llm" | "mock";
+  explanationLocale: ApiExplanationLocale;
 }
 
 export interface ApiErrorDto {

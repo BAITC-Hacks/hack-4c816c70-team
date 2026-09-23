@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { ApiClientError, evaluateChoices, getScenario } from "@/lib/api/client";
 import { buildEvaluatePayload } from "@/lib/api/payload";
 import type { ChoiceDraft, ScenarioVM, ValidateDraft } from "@/lib/contracts/ui";
+import { useLocale } from "@/lib/i18n";
 import { initialSimulatorState, simulatorReducer } from "./simulator-reducer";
 
 function apiMessage(error: unknown): string {
@@ -42,6 +43,7 @@ function restoreDraft(scenario: ScenarioVM, validateDraft: ValidateDraft): reado
 
 export function useSimulation(validateDraft: ValidateDraft) {
   const [state, dispatch] = useReducer(simulatorReducer, initialSimulatorState);
+  const { intlLocale } = useLocale();
   const requestId = useRef(0);
   const scenarioController = useRef<AbortController | null>(null);
   const evaluationController = useRef<AbortController | null>(null);
@@ -94,10 +96,10 @@ export function useSimulation(validateDraft: ValidateDraft) {
     const controller = new AbortController();
     evaluationController.current = controller;
     dispatch({ type: "evaluate-start", requestId: id, submittedChoices });
-    try { dispatch({ type: "evaluate-success", requestId: id, revision, result: await evaluateChoices(buildEvaluatePayload(state.scenario.scenario, submittedChoices), controller.signal) }); }
+    try { dispatch({ type: "evaluate-success", requestId: id, revision, result: await evaluateChoices(buildEvaluatePayload(state.scenario.scenario, submittedChoices), controller.signal, intlLocale) }); }
     catch (error) { if (!controller.signal.aborted) dispatch({ type: "evaluate-error", requestId: id, revision, message: apiMessage(error) }); }
     finally { evaluationInFlight.current = false; }
-  }, [state, validateDraft]);
+  }, [state, validateDraft, intlLocale]);
 
   const reset = useCallback(() => { evaluationController.current?.abort(); evaluationInFlight.current = false; requestId.current += 1; try { sessionStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* Storage is optional. */ } dispatch({ type: "reset" }); }, []);
   return { state, dispatch, loadScenario, setChoices, evaluate, reset };

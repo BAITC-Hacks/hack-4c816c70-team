@@ -1,8 +1,9 @@
 import { evaluationToVm, parseEvaluationDto, parseScenarioDto, scenarioToVm } from "@/lib/api/adapter";
-import type { ApiEvaluateRequestDto } from "@/lib/contracts/api.generated";
+import type { ApiEvaluateRequestDto, ApiExplanationLocale } from "@/lib/contracts/api.generated";
 import type { EvaluationVM, ScenarioVM } from "@/lib/contracts/ui";
 import { ApiClientError, normalizeApiError } from "./errors";
 import type { ApiErrorKind } from "./errors";
+import { buildEvaluateRequestInit } from "./request";
 
 const DEFAULT_API_URL = "http://localhost:8080";
 /** Live server explanation can take up to 60 seconds; leave transport headroom. */
@@ -45,7 +46,8 @@ export async function getScenario(signal?: AbortSignal): Promise<ScenarioVM> {
   catch (error) { if (error instanceof ApiClientError) throw error; throw new ApiClientError("contract", error instanceof Error ? error.message : "Некорректный контракт сценария."); }
 }
 
-export async function evaluateChoices(payload: ApiEvaluateRequestDto, signal?: AbortSignal): Promise<EvaluationVM> {
-  try { return evaluationToVm(parseEvaluationDto(await requestJson("/api/simulations/evaluate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, signal))); }
+/** explanationLocale is sent as Accept-Language; the server answers with the actual explanationLocale. */
+export async function evaluateChoices(payload: ApiEvaluateRequestDto, signal?: AbortSignal, explanationLocale?: ApiExplanationLocale): Promise<EvaluationVM> {
+  try { return evaluationToVm(parseEvaluationDto(await requestJson("/api/simulations/evaluate", buildEvaluateRequestInit(payload, explanationLocale), signal))); }
   catch (error) { if (error instanceof ApiClientError) throw error; throw new ApiClientError("contract", error instanceof Error ? error.message : "Некорректный контракт результата."); }
 }

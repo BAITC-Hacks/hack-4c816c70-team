@@ -177,6 +177,8 @@ export interface EvaluationVM {
   readonly explanation: ExplanationVM;
   /** Origin of explanation text as reported by the backend; it never affects numbers. */
   readonly explanationSource: "llm" | "mock";
+  /** Actual language of explanation text from the server; compare with the UI language before showing it as current. */
+  readonly explanationLocale: "ru-RU" | "kk-KZ" | "en-US";
   readonly source: "api" | "fixture";
 }
 
@@ -186,4 +188,7 @@ export interface ResultsProps {
   readonly submittedChoices: readonly ChoiceDraft[];
   readonly onEdit: () => void;
   readonly onReset: () => void;
+  /** Re-runs evaluate with the same submitted choices to get the explanation in the current UI language. */
+  readonly onReevaluate?: () => void;
+  readonly isReevaluating?: boolean;
 }
