@@ -36,6 +36,20 @@ internal static class ExplanationText
                 "В районе {0} показатель {1} ниже порога: {2}.",
                 "{0} ауданындағы {1} көрсеткіші шектен төмен: {2}.",
                 "In {0}, indicator {1} is below the threshold: {2}."),
+            // {0} measure, {1} where, {2} indicator, {3} lag-adjusted effect of this measure alone,
+            // {4} total change of the indicator in the district from all measures, {5} before, {6} after.
+            ["negative_effect"] = (
+                "{0} ({1}) снижает {2}: отдельный эффект меры с учётом лага {3}; итоговое изменение {2} в районе {4} ({5} → {6}).",
+                "{0} ({1}) шарасы {2} көрсеткішін төмендетеді: кідірісті ескергендегі жеке әсері {3}; аудандағы {2} көрсеткішінің жалпы өзгерісі {4} ({5} → {6}).",
+                "{0} ({1}) lowers {2}: the measure's own lag-adjusted effect is {3}; the total change of {2} in the district is {4} ({5} → {6})."),
+            ["negative_effect_offset"] = (
+                "{0} ({1}) снижает {2}: отдельный эффект меры с учётом лага {3}, но другие меры его компенсируют; итоговое изменение {2} в районе {4} ({5} → {6}).",
+                "{0} ({1}) шарасы {2} көрсеткішін төмендетеді: кідірісті ескергендегі жеке әсері {3}, бірақ басқа шаралар оның орнын толтырады; аудандағы {2} көрсеткішінің жалпы өзгерісі {4} ({5} → {6}).",
+                "{0} ({1}) lowers {2}: the measure's own lag-adjusted effect is {3}, but other measures offset it; the total change of {2} in the district is {4} ({5} → {6})."),
+            ["city_in_district"] = (
+                "все районы, в т. ч. {0}",
+                "барлық аудандар, соның ішінде {0}",
+                "all districts, incl. {0}"),
             ["weakest_district"] = (
                 "Самый слабый район {0} ({1}) имеет вес 30% в формуле Score.",
                 "Ұпайы ең төмен {0} ауданының ({1}) Score формуласындағы салмағы — 30%.",

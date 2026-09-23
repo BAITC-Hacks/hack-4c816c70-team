@@ -96,6 +96,8 @@ public static class ExplanationBuilder
                     indicatorId, F(value, locale))));
         }
 
+        risks.AddRange(NegativeEffects(choices, baseline, result, locale));
+
         risks.Add(new Claim("weakest_district",
             ExplanationText.Format(locale, "weakest_district", ExplanationText.DistrictName(weakest.District.Id, locale),
                 F(weakest.Score, locale))));
@@ -125,6 +127,50 @@ public static class ExplanationBuilder
         }
 
         return new ClaimCatalog(summary, strengths, risks);
+    }
+
+    /// <summary>
+    /// Every negative lag-adjusted effect of every chosen measure, per affected district. The measure's own effect is
+    /// reported separately from the indicator's total change, which other measures may offset. Shown even when the
+    /// indicator stays above the critical threshold.
+    /// </summary>
+    private static IEnumerable<Claim> NegativeEffects(
+        IReadOnlyList<ValidatedChoice> choices, SimulationOutcome baseline, SimulationOutcome result, string locale)
+    {
+        foreach (var choice in choices.OrderBy(c => int.Parse(c.Measure.Id.AsSpan(1))))
+        {
+            var negative = ScoreCalculator.RealizedEffects(choice.Measure)
+                .Where(e => ScoreCalculator.Round(e.Value) < 0)
+                .OrderBy(e => e.Key, StringComparer.Ordinal)
+                .ToList();
+            if (negative.Count == 0)
+            {
+                continue;
+            }
+
+            var districtIds = choice.District is null
+                ? ScenarioData.Districts.Select(d => d.Id)
+                : [choice.District.Id];
+            foreach (var districtId in districtIds)
+            {
+                var before = baseline.Districts.First(s => s.District.Id == districtId).Indicators;
+                var after = result.Districts.First(s => s.District.Id == districtId).Indicators;
+                var where = choice.District is null
+                    ? ExplanationText.Format(locale, "city_in_district", ExplanationText.DistrictName(districtId, locale))
+                    : ExplanationText.DistrictName(districtId, locale);
+                foreach (var (indicatorId, effect) in negative)
+                {
+                    var from = ScoreCalculator.Round(before[indicatorId]);
+                    var to = ScoreCalculator.Round(after[indicatorId]);
+                    var total = ScoreCalculator.Round(to - from);
+                    yield return new Claim(
+                        $"negative_{choice.Measure.Id}_{districtId}_{indicatorId}",
+                        ExplanationText.Format(locale, total < 0 ? "negative_effect" : "negative_effect_offset",
+                            choice.Measure.Id, where, indicatorId, Signed(effect, locale), Signed(total, locale),
+                            F(from, locale), F(to, locale)));
+                }
+            }
+        }
     }
 
     private static DistrictState Weakest(SimulationOutcome outcome) => outcome.Districts.MinBy(s => s.Score)!;
