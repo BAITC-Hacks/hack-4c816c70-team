@@ -86,6 +86,17 @@ public static class ScoreCalculator
         return new SimulationOutcome(states, average, min, critical, total, appliedSynergies);
     }
 
+    /// <summary>
+    /// Leave-one-out contribution: full Score minus Score of the same set without this measure
+    /// (includes synergies that the measure enables).
+    /// </summary>
+    public static double ScoreImpact(IReadOnlyList<ValidatedChoice> choices, ValidatedChoice measure, double fullScore) =>
+        fullScore - Simulate(choices.Where(c => c != measure).ToList()).Score;
+
+    /// <summary>Lag-adjusted effects of one measure per affected district, before clipping and synergies.</summary>
+    public static IReadOnlyDictionary<string, double> RealizedEffects(Measure measure) =>
+        measure.Effects.ToDictionary(e => e.Key, e => e.Value * RealizedShare(measure));
+
     private static IEnumerable<string> TargetDistricts(ValidatedChoice choice) =>
         choice.Measure.Scope == MeasureScope.City
             ? ScenarioData.Districts.Select(d => d.Id)

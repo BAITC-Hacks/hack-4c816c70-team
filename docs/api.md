@@ -77,9 +77,12 @@ Response `200` for this request (actual output; `districts` shortened to Nura, t
     "strengths": ["Наибольший рост в районе Нура: +3.78 к оценке района.", "Сработала синергия M10 + M12: B1 +2 в районе Нура."],
     "risks": ["Самый слабый район Нура (52.96) определяет 30% итогового балла."],
     "recommendations": ["Сравните набор с альтернативами, заменив меру с наименьшим вкладом."]
-  }
+  },
+  "explanationSource": "mock"
 }
 ```
+
+`explanationSource` is `"llm"` when the text came from OpenAI and passed validation, otherwise `"mock"` (deterministic template). The shape of `explanation` is the same in both cases.
 
 Scoring (C#, `Features/Simulation/ScoreCalculator.cs`), per `docs/reference/district-dataset.docx`:
 
@@ -88,7 +91,25 @@ Scoring (C#, `Features/Simulation/ScoreCalculator.cs`), per `docs/reference/dist
 - `criticalCount` = number of district × indicator values strictly below 40;
 - `score = 0.7 × averageScore + 0.3 × minDistrictScore − 1.0 × criticalCount`.
 
-`explanation` is currently a deterministic template built from the computed numbers (works without an LLM key). An LLM may later replace the text of the same four fields; it never calculates or changes numbers.
+### AI explanation
+
+Environment variables (read by the API at startup; none is required to build or run):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `LLM_MODE` | `mock` | `mock` — deterministic template; `live` — OpenAI Responses API |
+| `OPENAI_API_KEY` | — | Required for `live`; never logged |
+| `OPENAI_MODEL` | — | Required for `live`; model name is not hardcoded |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1/` | Optional, for a proxy or a local stub in tests |
+| `FRONTEND_ORIGIN` | `http://localhost:3000` | CORS origin of the frontend; comma-separated list allowed |
+
+In `live` mode the API sends the model only numbers already computed by `ScoreCalculator`: Score and its parts before/after, all districts with all ten indicators (before, after, delta, critical flag), each chosen measure with its realized share `(8 − L) / 8`, lag-adjusted effects and `scoreImpact` (Score minus Score of the same set without this measure), applied synergies, remaining critical values and `alternatives`.
+
+`alternatives` (up to 5) are single-measure replacements that raise Score. The server builds each candidate set, runs the same validation as this endpoint (exactly 5, budget ≤ 100, ≤ 2 per category, district scope, incompatibilities), scores it with `ScoreCalculator` and keeps the best district per pair: `{ replaceMeasureId, withMeasureId, withMeasureName, districtId, district, spentAfter, scoreAfter, scoreDelta }`. Recommendations name measures only from this list; the mock explanation uses the top two, e.g. «Замена M5 на M3 (Нура) даёт Score 57.21 (+0.67) при стоимости набора 100.». `alternatives` are not a separate response field. The request uses `POST /v1/responses` with `store: false` and Structured Outputs (`text.format.type = json_schema`, `strict: true`) whose schema is exactly `summary: string`, `strengths`, `risks`, `recommendations: string[]`, `additionalProperties: false`.
+
+Before the text reaches the client the API checks: response status `completed`, no refusal, exactly these four fields, non-empty strings (summary ≤ 1200 chars, lists ≤ 8 items of ≤ 500 chars), every number in the text must be present in the computed facts (exact or rounded), and every measure ID (`M1`–`M14`) must be a chosen measure or a `withMeasureId` from `alternatives`. Otherwise the deterministic explanation is returned.
+
+The whole live analysis — all attempts and backoffs — has one 60 s deadline; when it expires the API immediately returns the `mock` explanation. Network errors and HTTP 408/409/429/5xx are retried at most twice within that deadline (backoff 1 s, 2 s). A request therefore waits at most about 60 s plus scoring time; a frontend request timeout of 75 s is enough. `score`, `districts` and all other numeric fields are identical in both modes. Logs contain attempt, HTTP status, elapsed time and token counts only — no key, request body or model text.
 
 ### Errors
 
