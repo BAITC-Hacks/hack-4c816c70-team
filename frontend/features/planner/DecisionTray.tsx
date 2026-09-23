@@ -1,4 +1,4 @@
-import type { Ref } from "react";
+import { useLayoutEffect, useRef, type Ref } from "react";
 import type {
   ChoiceDraft,
   DistrictId,
@@ -61,6 +61,16 @@ export function DecisionTray({
   onEvaluate,
   onClose,
 }: DecisionTrayProps) {
+  const trayRef = useRef<HTMLElement>(null);
+  const pendingRemovalIndex = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const index = pendingRemovalIndex.current;
+    if (index === null) return;
+    pendingRemovalIndex.current = null;
+    const buttons = trayRef.current?.querySelectorAll<HTMLButtonElement>("[data-remove-measure]");
+    const next = buttons?.[Math.min(index, buttons.length - 1)];
+    (next ?? trayRef.current?.querySelector<HTMLHeadingElement>("h2"))?.focus();
+  }, [choices]);
   const copy = t.copy;
   const emptySlots = Math.max(0, (requiredChoices ?? 0) - choices.length);
   const isOverBudget = validation.provisionalRemaining < 0;
@@ -69,7 +79,7 @@ export function DecisionTray({
   const describe = (issue: SelectionIssue) => describeIssue(issue, scenario, choices, validation, t);
 
   return (
-    <aside id={id} className={styles.tray} aria-labelledby={`${id}-heading`}>
+    <aside ref={trayRef} id={id} className={styles.tray} aria-labelledby={`${id}-heading`}>
       <div className={styles.trayHeader}>
         <h2 id={`${id}-heading`} ref={headingRef} tabIndex={-1} className={styles.trayTitle}>
           {copy.plan}
@@ -115,7 +125,7 @@ export function DecisionTray({
             (issue) => !isProgressIssue(issue) && issue.measureIds?.includes(choice.measureId),
           );
           return (
-            <li key={`${choice.measureId}-${index}`} className={styles.slot} data-state={hasIssue ? "issue" : "ok"}>
+            <li key={choice.measureId} className={styles.slot} data-state={hasIssue ? "issue" : "ok"}>
               <div className={styles.slotHead}>
                 <span className={styles.measureId}>{choice.measureId}</span>
                 <p className={styles.slotName}>
@@ -125,8 +135,12 @@ export function DecisionTray({
                 <button
                   type="button"
                   className={styles.slotRemove}
+                  data-remove-measure={choice.measureId}
                   aria-label={copy.removeFromPlan(choice.measureId)}
-                  onClick={() => onRemove(choice.measureId)}
+                  onClick={() => {
+                    pendingRemovalIndex.current = index;
+                    onRemove(choice.measureId);
+                  }}
                 >
                   <span aria-hidden="true">×</span>
                 </button>

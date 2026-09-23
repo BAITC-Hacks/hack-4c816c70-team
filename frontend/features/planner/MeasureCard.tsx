@@ -155,25 +155,21 @@ export function MeasureCard({
 
       <div className={styles.cardActions}>
         {isSelected ? (
-          <>
-            <p className={styles.selectedMark}>
-              <span className={styles.check} aria-hidden="true" />
-              {copy.inPlan}
-            </p>
-            <Button variant="secondary" onClick={onRemove}>
-              {copy.remove}
-            </Button>
-          </>
-        ) : (
-          <Button
-            variant={availability.status === "blocked" ? "secondary" : "primary"}
-            disabled={availability.status === "blocked"}
-            aria-describedby={reasons.length > 0 ? reasonsId : undefined}
-            onClick={onAdd}
-          >
-            {copy.addToPlan}
-          </Button>
-        )}
+          <p key="selected" className={styles.selectedMark}>
+            <span className={styles.check} aria-hidden="true" />
+            {copy.inPlan}
+          </p>
+        ) : null}
+        {/* Keep the same DOM button when a keyboard user adds/removes this measure. */}
+        <Button
+          key="action"
+          variant={isSelected || availability.status === "blocked" ? "secondary" : "primary"}
+          disabled={!isSelected && availability.status === "blocked"}
+          aria-describedby={!isSelected && reasons.length > 0 ? reasonsId : undefined}
+          onClick={isSelected ? onRemove : onAdd}
+        >
+          {isSelected ? copy.remove : copy.addToPlan}
+        </Button>
       </div>
       {reasons.length > 0 ? (
         <ul id={reasonsId} className={styles.reasons}>
