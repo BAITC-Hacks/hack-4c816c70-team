@@ -137,7 +137,7 @@ export interface DistrictResultVM {
   readonly scoreAfter: number;
   readonly indicatorsBefore: IndicatorValues;
   readonly indicatorsAfter: IndicatorValues;
-  /** Optional until the backend explicitly supplies delta fields. */
+  /** Display-only after - before, derived from API values with backend-owner approval. */
   readonly scoreDelta?: number;
   readonly indicatorDeltas?: IndicatorEffects;
 }
@@ -168,6 +168,7 @@ export interface EvaluationVM {
   readonly remaining: number;
   readonly baselineScore: number;
   readonly score: number;
+  /** Display-only score - baselineScore; never recalculate the simulation. */
   readonly scoreDelta?: number;
   readonly districts: readonly DistrictResultVM[];
   /** null means missing in the response; [] means supplied and empty. */
