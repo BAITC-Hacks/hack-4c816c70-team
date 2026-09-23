@@ -9,8 +9,9 @@ public static class ExplanationSource
 }
 
 /// <summary>
-/// Picks the explanation text only; numbers in the response always come from <see cref="ScoreCalculator"/>.
-/// Live mode falls back to the deterministic template on any LLM failure.
+/// All explanation text is written by the server from <see cref="ScoreCalculator"/> output.
+/// In live mode the LLM only prioritizes the verified claims; "llm" source means the order came from the model.
+/// Any LLM failure keeps the default order ("mock").
 /// </summary>
 public sealed class ExplanationService(LlmOptions options, OpenAiExplanationClient client)
 {
@@ -22,19 +23,22 @@ public sealed class ExplanationService(LlmOptions options, OpenAiExplanationClie
         CancellationToken cancellationToken)
     {
         var alternatives = ReplacementAdvisor.Find(choices, result.Score);
+        var catalog = ExplanationBuilder.BuildCatalog(choices, baseline, result, spent);
 
         if (options.IsLiveReady)
         {
-            // The model writes summary/strengths/risks about the chosen set only; it never sees or phrases swaps.
             var facts = AnalysisFacts.Build(choices, baseline, result, spent);
-            var allowedMeasureIds = choices.Select(c => c.Measure.Id).ToHashSet();
-            var explanation = await client.TryExplainAsync(facts, allowedMeasureIds, cancellationToken);
-            if (explanation is not null)
+            var order = await client.TryRankAsync(facts, catalog, cancellationToken);
+            if (order is not null)
             {
-                return (explanation with { Recommendations = RecommendationBuilder.Build(alternatives) }, ExplanationSource.Llm);
+                return (ExplanationBuilder.Assemble(catalog, order.StrengthOrder, order.RiskOrder, alternatives), ExplanationSource.Llm);
             }
         }
 
-        return (ExplanationBuilder.Build(choices, baseline, result, spent, alternatives), ExplanationSource.Mock);
+        return (ExplanationBuilder.Assemble(
+            catalog,
+            catalog.Strengths.Select(c => c.Id).ToList(),
+            catalog.Risks.Select(c => c.Id).ToList(),
+            alternatives), ExplanationSource.Mock);
     }
 }
