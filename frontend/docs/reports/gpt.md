@@ -2,7 +2,7 @@
 
 ## Commit
 
-Общий commit этого этапа: будет указан после проверки и push.
+Общий commit этого этапа: `1e6082c feat(frontend): redesign routed simulator`.
 
 ## Реализовано
 
