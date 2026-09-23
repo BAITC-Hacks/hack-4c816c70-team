@@ -1,0 +1,143 @@
+{
+  "commit": "7c0570e",
+  "checks": [
+    {
+      "name": "Оценить решения receives empty 503"
+    },
+    {
+      "name": "empty evaluate503 localized ru"
+    },
+    {
+      "name": "empty evaluate503 keeps five choices ru"
+    },
+    {
+      "name": "Шешімдерді бағалау receives empty 503"
+    },
+    {
+      "name": "empty evaluate503 localized kk"
+    },
+    {
+      "name": "empty evaluate503 keeps five choices kk"
+    },
+    {
+      "name": "Evaluate decisions receives empty 503"
+    },
+    {
+      "name": "empty evaluate503 localized en"
+    },
+    {
+      "name": "empty evaluate503 keeps five choices en"
+    },
+    {
+      "name": "Evaluate decisions retry HTTP200"
+    },
+    {
+      "name": "Evaluate decisions locale retained"
+    },
+    {
+      "name": "retry reference95/56.54"
+    },
+    {
+      "name": "Find alternatives receives empty 503"
+    },
+    {
+      "name": "empty alternatives503 is localized HTTP error"
+    },
+    {
+      "name": "empty alternatives503 keeps result and choices"
+    },
+    {
+      "name": "Try again retry HTTP200"
+    },
+    {
+      "name": "Try again locale retained"
+    },
+    {
+      "name": "alternatives retry best57.21/100"
+    },
+    {
+      "name": "language switch no POST"
+    },
+    {
+      "name": "Қазақ тілінде қайта бағалау receives empty 503"
+    },
+    {
+      "name": "empty reevaluation503 keeps previous result"
+    },
+    {
+      "name": "old explanation remains correctly tagged English"
+    },
+    {
+      "name": "Қайталап көру retry HTTP200"
+    },
+    {
+      "name": "Қайталап көру locale retained"
+    },
+    {
+      "name": "reevaluation retry95/56.54"
+    },
+    {
+      "name": "mobile home heading and decide action visible"
+    },
+    {
+      "name": "mobile home390 no overflow",
+      "scroll": 390,
+      "body": 390,
+      "width": 390
+    },
+    {
+      "name": "mobile preview intentionally hidden by existing CSS"
+    },
+    {
+      "name": "preview-day asset200",
+      "status": 200,
+      "bytes": 416006
+    },
+    {
+      "name": "preview-night asset200",
+      "status": 200,
+      "bytes": 394927
+    },
+    {
+      "name": "no uncaught mobile browser errors"
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "locale": "ru-RU"
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "locale": "kk-KZ"
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "locale": "en-US"
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "locale": "en-US"
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/alternatives",
+      "locale": "en-US"
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/alternatives",
+      "locale": "en-US"
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "locale": "kk-KZ"
+    },
+    {
+      "url": "http://localhost:8083/api/simulations/evaluate",
+      "locale": "kk-KZ"
+    }
+  ],
+  "errors": [],
+  "failure": null,
+  "pilotMobileWaitNote": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('figure').first() to be visible\u001b[22m\n\u001b[2m    34 × locator resolved to hidden <figure class=\"city-scene-module__ibuzzq__scene\">…</figure>\u001b[22m\n",
+  "mobilePreview": "Hidden below900px by pre-existing .heroArt CSS; new day and night PNG assets200."
+}
