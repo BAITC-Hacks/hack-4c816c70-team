@@ -39,6 +39,23 @@ Response `200` (arrays shortened; the real response has 10 indicators, 5 distric
 
 ## POST /api/simulations/evaluate
 
+### Explanation language
+
+Optional request header: `Accept-Language: ru-RU`, `kk-KZ` or `en-US`. The JSON request body does not change.
+
+| Requested language | Actual `explanationLocale` | Explanation text |
+| --- | --- | --- |
+| `ru-RU` / `ru` | `ru-RU` | Russian, decimal comma |
+| `kk-KZ` / `kk` | `kk-KZ` | Kazakh, decimal comma |
+| `en-US` / `en` | `en-US` | English, decimal point |
+| Missing or no supported language | `ru-RU` | Russian fallback |
+
+Regional variants use their supported base language (`en-GB` → `en-US`). Language matching is case-insensitive. For lists, the supported entry with the highest positive `q` value wins; ties retain header order. Unsupported/malformed ranges and entries with `q=0` are ignored; when none match, Russian is used. For example, `en-US;q=0.4, kk-KZ;q=0.9` selects `kk-KZ`.
+
+Every successful response includes the actual canonical `explanationLocale` and a matching `Content-Language` header. All four explanation fields and district names inside them use that language in `mock`, accepted `live`, and fallback after an OpenAI/validation failure. Language selection never depends on LLM success.
+
+Language applies only to `explanation`. IDs, request structure, calculations, numeric JSON fields, scenario/district metadata outside the explanation and validation error messages are unchanged. The reference request below returns `spent=95`, `remaining=5`, `score=56.54` in all three languages.
+
 Request: exactly five choices, order does not matter. `districtId` is required for `district` measures and must be omitted (or `null`/empty) for `city` measures.
 
 ```json
@@ -82,7 +99,7 @@ Response `200` for this request (actual output; `districts` shortened to Nura, t
       "..."
     ],
     "risks": [
-      "Самый слабый район Нура (52,96) определяет 30% итогового балла.",
+      "Самый слабый район Нура (52,96) имеет вес 30% в формуле Score.",
       "Меры с долгим лагом (M7, M8, M5) реализуют лишь часть эффекта за горизонт 8 кварталов."
     ],
     "recommendations": [
@@ -92,13 +109,14 @@ Response `200` for this request (actual output; `districts` shortened to Nura, t
       "Варианты замен независимы и применяются по отдельности: их эффекты не суммируются."
     ]
   },
-  "explanationSource": "mock"
+  "explanationSource": "mock",
+  "explanationLocale": "ru-RU"
 }
 ```
 
 All four `explanation` fields are written by the server from computed numbers. `explanationSource` is `"llm"` when OpenAI set the priority order of `strengths` and `risks` and that order passed validation, otherwise `"mock"` (default server order). The shape and the set of sentences are the same in both cases; only the order of `strengths` and `risks` can differ.
 
-Numbers inside explanation text use the Russian decimal comma (`Нура (52,96)`, `+3,98`, `−1,75`), while all numeric JSON fields keep standard JSON numbers (`"score": 56.54`). The comma format is built with an explicit `NumberFormatInfo`, so it works with `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT` in Docker.
+Numbers inside Russian and Kazakh explanation text use the decimal comma (`Нура (52,96)`, `+3,98`, `−1,75`); English explanation text uses the decimal point. All numeric JSON fields keep standard JSON numbers (`"score": 56.54`). The comma format is built with an explicit `NumberFormatInfo`, so it works with `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT` in Docker.
 
 `recommendations` are always built by the server, in both modes, from validated single-measure replacements (see "AI explanation"). Up to three items of the form `Заменить <id> (<district of the removed measure>) на <id> (<district of the new measure>).` — or `Перенести <id>: <from> → <to>.` when the same measure moves to another district — followed by `При этой отдельной замене Score <scoreAfter> (+<delta>), расходы <spent> из 100.` City measures are shown as `все районы`. The last item says that the replacements are independent and applied one at a time (their effects do not add up). If no single replacement improves Score, the only item is «Ни одна допустимая замена одной меры не повышает Score — отдельной заменой набор не улучшить.»
 
@@ -158,3 +176,13 @@ Every error returns the same JSON shape:
 | 400 | `INCOMPATIBLE_MEASURES` | M1 + M3 anywhere; M4 + M7 or M5 + M13 in the same district |
 
 Only the first failure is returned: structure and count, then per-choice checks, then budget, category limit, incompatibilities. `message` is in Russian and can be shown to the user as is. The server is authoritative for validation and scoring.
+
+## Reproducible explanation-language checks
+
+With .NET 8 and Python 3 installed, run from the repository root in WSL:
+
+```bash
+python3 backend/scripts/verify-explanation-locales.py
+```
+
+The script builds the API, starts temporary local instances and a local OpenAI stub, and checks Russian/Kazakh/English in mock, accepted live, HTTP-error fallback and invalid-order fallback. It checks language negotiation and OpenAPI, uses no real API key or paid OpenAI calls, and cleans up its own processes.

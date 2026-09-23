@@ -1,6 +1,7 @@
 using CitySimulator.Api.Features.Analysis;
 using CitySimulator.Api.Features.Scenario;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CitySimulator.Api.Features.Simulation;
 
@@ -11,7 +12,11 @@ public static class SimulationEndpoints
         app.MapPost("/api/simulations/evaluate", Evaluate)
             .WithName("EvaluateSimulation")
             .WithTags("Simulation")
-            .WithSummary("Проверяет набор из 5 решений и считает Astana Quality of Life Score.");
+            .WithSummary("Проверяет набор из 5 решений и считает Astana Quality of Life Score.")
+            .WithDescription("Accept-Language selects explanation text: ru-RU (default), kk-KZ or en-US. "
+                + "Quality weights and short language tags are supported. "
+                + "explanationLocale and Content-Language report the actual locale, including mock/fallback. "
+                + "Request body and numeric results are independent of language.");
 
         return app;
     }
@@ -19,7 +24,9 @@ public static class SimulationEndpoints
     private static async Task<Results<Ok<EvaluateResponse>, BadRequest<ErrorResponse>, UnprocessableEntity<ErrorResponse>>> Evaluate(
         EvaluateRequest request,
         ExplanationService explanationService,
-        CancellationToken cancellationToken)
+        HttpContext httpContext,
+        CancellationToken cancellationToken,
+        [FromHeader(Name = "Accept-Language")] string? acceptLanguage = null)
     {
         var (choices, failure) = ChoiceValidator.Validate(request);
         if (failure is not null)
@@ -48,7 +55,9 @@ public static class SimulationEndpoints
             })
             .ToList();
 
-        var (explanation, source) = await explanationService.ExplainAsync(choices!, baseline, result, spent, cancellationToken);
+        var locale = ExplanationLocales.Resolve(acceptLanguage);
+        var (explanation, source) = await explanationService.ExplainAsync(choices!, baseline, result, spent, locale, cancellationToken);
+        httpContext.Response.Headers.ContentLanguage = locale;
 
         return TypedResults.Ok(new EvaluateResponse(
             spent,
@@ -60,7 +69,8 @@ public static class SimulationEndpoints
             districts,
             result.AppliedSynergies,
             explanation,
-            source));
+            source,
+            locale));
     }
 
     private static ScoreBreakdown Breakdown(SimulationOutcome outcome) => new(

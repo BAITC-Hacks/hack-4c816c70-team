@@ -4,31 +4,37 @@ using static CitySimulator.Api.Features.Simulation.TextNumberFormat;
 namespace CitySimulator.Api.Features.Simulation;
 
 /// <summary>
-/// Server-side recommendations from <see cref="ReplacementAdvisor"/> options only. Used in both mock and live
-/// modes, so measure ids, districts, Score and cost in recommendations are never written by the LLM.
+/// Server-side recommendations from <see cref="ReplacementAdvisor"/> options only, localized in both modes.
+/// Measure IDs, districts, Score and cost in recommendations are never written by the LLM.
 /// </summary>
 public static class RecommendationBuilder
 {
     public const int MaxOptions = 3;
 
-    public static IReadOnlyList<string> Build(IReadOnlyList<ReplacementOption> alternatives)
+    public static IReadOnlyList<string> Build(
+        IReadOnlyList<ReplacementOption> alternatives,
+        string locale = ExplanationLocales.Russian)
     {
         if (alternatives.Count == 0)
         {
-            return ["Ни одна допустимая замена одной меры не повышает Score — отдельной заменой набор не улучшить."];
+            return [ExplanationText.Format(locale, "no_improvement")];
         }
 
         var items = alternatives
             .Take(MaxOptions)
-            .Select(a => $"{Action(a)} При этой отдельной замене Score {F(a.ScoreAfter)} ({Signed(a.ScoreDelta)}), " +
-                         $"расходы {a.SpentAfter} из {ScenarioData.Budget}.")
+            .Select(a => ExplanationText.Format(locale, "replacement_result", Action(a, locale),
+                F(a.ScoreAfter, locale), Signed(a.ScoreDelta, locale), a.SpentAfter, ScenarioData.Budget))
             .ToList();
-        items.Add("Варианты замен независимы и применяются по отдельности: их эффекты не суммируются.");
+        items.Add(ExplanationText.Format(locale, "independent"));
         return items;
     }
 
-    private static string Action(ReplacementOption a) =>
-        a.ReplaceMeasureId == a.WithMeasureId
-            ? $"Перенести {a.ReplaceMeasureId}: {a.ReplaceDistrict} → {a.WithDistrict}."
-            : $"Заменить {a.ReplaceMeasureId} ({a.ReplaceDistrict}) на {a.WithMeasureId} ({a.WithDistrict}).";
+    private static string Action(ReplacementOption a, string locale)
+    {
+        var from = ExplanationText.DistrictName(a.ReplaceDistrictId, locale);
+        var to = ExplanationText.DistrictName(a.WithDistrictId, locale);
+        return a.ReplaceMeasureId == a.WithMeasureId
+            ? ExplanationText.Format(locale, "move", a.ReplaceMeasureId, from, to)
+            : ExplanationText.Format(locale, "replace", a.ReplaceMeasureId, from, a.WithMeasureId, to);
+    }
 }

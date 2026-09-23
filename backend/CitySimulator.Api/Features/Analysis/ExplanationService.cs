@@ -20,10 +20,11 @@ public sealed class ExplanationService(LlmOptions options, OpenAiExplanationClie
         SimulationOutcome baseline,
         SimulationOutcome result,
         int spent,
+        string locale,
         CancellationToken cancellationToken)
     {
         var alternatives = ReplacementAdvisor.Find(choices, result.Score);
-        var catalog = ExplanationBuilder.BuildCatalog(choices, baseline, result, spent);
+        var catalog = ExplanationBuilder.BuildCatalog(choices, baseline, result, spent, locale);
 
         if (options.IsLiveReady)
         {
@@ -31,7 +32,7 @@ public sealed class ExplanationService(LlmOptions options, OpenAiExplanationClie
             var order = await client.TryRankAsync(facts, catalog, cancellationToken);
             if (order is not null)
             {
-                return (ExplanationBuilder.Assemble(catalog, order.StrengthOrder, order.RiskOrder, alternatives), ExplanationSource.Llm);
+                return (ExplanationBuilder.Assemble(catalog, order.StrengthOrder, order.RiskOrder, alternatives, locale), ExplanationSource.Llm);
             }
         }
 
@@ -39,6 +40,6 @@ public sealed class ExplanationService(LlmOptions options, OpenAiExplanationClie
             catalog,
             catalog.Strengths.Select(c => c.Id).ToList(),
             catalog.Risks.Select(c => c.Id).ToList(),
-            alternatives), ExplanationSource.Mock);
+            alternatives, locale), ExplanationSource.Mock);
     }
 }
