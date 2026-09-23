@@ -12,7 +12,8 @@ public static class ExplanationBuilder
         IReadOnlyList<ValidatedChoice> choices,
         SimulationOutcome baseline,
         SimulationOutcome result,
-        int spent)
+        int spent,
+        IReadOnlyList<ReplacementOption> alternatives)
     {
         var delta = ScoreCalculator.Round(result.Score) - ScoreCalculator.Round(baseline.Score);
         var summary =
@@ -62,19 +63,16 @@ public static class ExplanationBuilder
                 $"Меры с долгим лагом ({string.Join(", ", slowMeasures)}) реализуют лишь часть эффекта за горизонт {ScenarioData.HorizonQuarters} кварталов.");
         }
 
-        var recommendations = new List<string>();
-        var chosenIds = choices.Select(c => c.Measure.Id).ToHashSet();
-        foreach (var group in criticals.GroupBy(c => c.IndicatorId))
+        // Only server-validated swaps (budget, category limit, incompatibilities already checked).
+        var recommendations = alternatives
+            .Take(2)
+            .Select(a =>
+                $"Замена {a.ReplaceMeasureId} на {a.WithMeasureId} ({a.District}) даёт Score {F(a.ScoreAfter)} ({Signed(a.ScoreDelta)}) при стоимости набора {a.SpentAfter}.")
+            .ToList();
+
+        if (recommendations.Count == 0)
         {
-            var options = ScenarioData.Measures
-                .Where(m => !chosenIds.Contains(m.Id) && m.Effects.TryGetValue(group.Key, out var e) && e > 0)
-                .Select(m => $"{m.Id} (стоимость {m.Cost})")
-                .ToList();
-            if (options.Count > 0)
-            {
-                recommendations.Add(
-                    $"Для {group.Key} в районах {string.Join(", ", group.Select(c => c.District.Name))} рассмотрите: {string.Join(", ", options)}.");
-            }
+            recommendations.Add("Ни одна допустимая замена одной меры не повышает Score — набор локально оптимален.");
         }
 
         var remaining = ScenarioData.Budget - spent;
@@ -82,11 +80,6 @@ public static class ExplanationBuilder
         {
             recommendations.Add(
                 $"Остаток {remaining} не даёт бонуса — его можно направить на более дорогую меру с большим эффектом.");
-        }
-
-        if (recommendations.Count == 0)
-        {
-            recommendations.Add("Сравните набор с альтернативами, заменив меру с наименьшим вкладом.");
         }
 
         return new Explanation(summary, strengths, risks, recommendations);

@@ -1,3 +1,4 @@
+using CitySimulator.Api.Features.Analysis;
 using CitySimulator.Api.Features.Scenario;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -15,8 +16,10 @@ public static class SimulationEndpoints
         return app;
     }
 
-    private static Results<Ok<EvaluateResponse>, BadRequest<ErrorResponse>, UnprocessableEntity<ErrorResponse>> Evaluate(
-        EvaluateRequest request)
+    private static async Task<Results<Ok<EvaluateResponse>, BadRequest<ErrorResponse>, UnprocessableEntity<ErrorResponse>>> Evaluate(
+        EvaluateRequest request,
+        ExplanationService explanationService,
+        CancellationToken cancellationToken)
     {
         var (choices, failure) = ChoiceValidator.Validate(request);
         if (failure is not null)
@@ -45,6 +48,8 @@ public static class SimulationEndpoints
             })
             .ToList();
 
+        var (explanation, source) = await explanationService.ExplainAsync(choices!, baseline, result, spent, cancellationToken);
+
         return TypedResults.Ok(new EvaluateResponse(
             spent,
             ScenarioData.Budget - spent,
@@ -54,7 +59,8 @@ public static class SimulationEndpoints
             Breakdown(baseline),
             districts,
             result.AppliedSynergies,
-            ExplanationBuilder.Build(choices!, baseline, result, spent)));
+            explanation,
+            source));
     }
 
     private static ScoreBreakdown Breakdown(SimulationOutcome outcome) => new(

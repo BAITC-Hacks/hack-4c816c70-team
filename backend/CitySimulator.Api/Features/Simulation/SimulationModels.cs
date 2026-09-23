@@ -31,7 +31,8 @@ public sealed record EvaluateResponse(
     ScoreBreakdown BaselineBreakdown,
     IReadOnlyList<DistrictResult> Districts,
     IReadOnlyList<AppliedSynergy> AppliedSynergies,
-    Explanation Explanation);
+    Explanation Explanation,
+    string ExplanationSource);
 
 public sealed record ApiError(string Code, string Message);
 
