@@ -8,8 +8,9 @@ using CitySimulator.Api.Features.Simulation;
 namespace CitySimulator.Api.Features.Analysis;
 
 /// <summary>
-/// Calls OpenAI Responses API (POST /v1/responses) with Structured Outputs to prioritize server-written claims.
-/// The model returns only claim IDs; returns null on any failure so the caller keeps the default order.
+/// Calls OpenAI Responses API (POST /v1/responses) with Structured Outputs. The model returns only IDs of
+/// server-written facts: the priority of explanation claims, or the choice of an alternative plan and its facts.
+/// Returns null on any failure so the caller keeps its deterministic result.
 /// Never logs the API key, the request body or the model output.
 /// </summary>
 public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options, ILogger<OpenAiExplanationClient> logger)
@@ -32,8 +33,22 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
           ниже 40, самый слабый район (30% итогового балла), синергии и лаг. Текст не пиши.
         """;
 
+    private const string AlternativeInstructions = """
+        Ты аналитик городского симулятора «Аким на 5 часов» (Астана). Сервер перебрал все замены одной меры в плане
+        из 5 мер и оставил только варианты, которые улучшают цель пользователя (goal). Все числа и тексты посчитаны сервером.
+        Твоя задача — только выбрать ID.
+
+        Правила:
+        - variantId: один ID из variants — вариант, который лучше всего подходит под goal с учётом его потерь.
+        - argumentIds: 1–3 ID из arguments ИМЕННО выбранного варианта; обязательно включи его goalFactId.
+        - tradeoffIds: 0–4 ID из tradeoffs ИМЕННО выбранного варианта; обязательно включи все его mandatoryTradeoffIds.
+        - Не выдумывай и не повторяй ID, не бери ID другого варианта. Текст не пиши.
+        """;
+
+    private delegate bool OutputValidator<T>(string text, out T? value, out string reason);
+
     /// <summary>Returns a validated priority order of the catalog claims, or null to keep the default order.</summary>
-    public async Task<ClaimOrder?> TryRankAsync(AnalysisFacts facts, ClaimCatalog catalog, CancellationToken cancellationToken)
+    public Task<ClaimOrder?> TryRankAsync(AnalysisFacts facts, ClaimCatalog catalog, CancellationToken cancellationToken)
     {
         var input = JsonSerializer.Serialize(new
         {
@@ -44,7 +59,44 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
                 risks = catalog.Risks.Select(c => new { id = c.Id, text = c.Text }),
             },
         }, InputJsonOptions);
-        var body = BuildRequestBody(input, catalog);
+        return TryStructuredAsync<ClaimOrder>(
+            "explanation",
+            Instructions,
+            "Результат расчёта и проверенные утверждения (JSON):\n" + input,
+            "claim_priorities",
+            OrderSchema(catalog),
+            (string text, out ClaimOrder? order, out string reason) => ExplanationValidator.TryParse(text, catalog, out order, out reason),
+            options.MaxRetries,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Exactly one request, without retries: the model picks an eligible variant and fact IDs of that variant.
+    /// Returns null on any failure so the caller uses the deterministic advice.
+    /// </summary>
+    public Task<AlternativeSelection?> TrySelectAlternativeAsync(object input, AlternativeChoiceSet choices, CancellationToken cancellationToken) =>
+        TryStructuredAsync<AlternativeSelection>(
+            "alternatives",
+            AlternativeInstructions,
+            "Цель, исходный план и допустимые варианты (JSON):\n" + JsonSerializer.Serialize(input, InputJsonOptions),
+            "alternative_selection",
+            AlternativeSelectionValidator.Schema(choices),
+            (string text, out AlternativeSelection? selection, out string reason) =>
+                AlternativeSelectionValidator.TryParse(text, choices, out selection, out reason),
+            maxRetries: 0,
+            cancellationToken);
+
+    private async Task<T?> TryStructuredAsync<T>(
+        string purpose,
+        string instructions,
+        string input,
+        string schemaName,
+        JsonObject schema,
+        OutputValidator<T> validate,
+        int maxRetries,
+        CancellationToken cancellationToken) where T : class
+    {
+        var body = BuildRequestBody(instructions, input, schemaName, schema);
         var total = Stopwatch.StartNew();
         var attempt = 0;
 
@@ -54,10 +106,10 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
 
         try
         {
-            while (attempt <= options.MaxRetries)
+            while (attempt <= maxRetries)
             {
                 attempt++;
-                var isLastAttempt = attempt > options.MaxRetries;
+                var isLastAttempt = attempt > maxRetries;
                 var stopwatch = Stopwatch.StartNew();
 
                 try
@@ -74,13 +126,25 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
                     if (response.IsSuccessStatusCode)
                     {
                         var payload = await response.Content.ReadAsStringAsync(deadline.Token);
-                        return ParseResponse(payload, catalog, attempt, status, stopwatch.ElapsedMilliseconds);
+                        var text = ExtractOutputText(purpose, payload, attempt, status, stopwatch.ElapsedMilliseconds);
+                        if (text is null)
+                        {
+                            return null;
+                        }
+
+                        if (!validate(text, out var value, out var reason))
+                        {
+                            logger.LogWarning("OpenAI {Purpose} rejected by validation: {Reason}", purpose, reason);
+                            return null;
+                        }
+
+                        return value;
                     }
 
                     var transient = IsTransient(status);
                     logger.LogWarning(
-                        "OpenAI explanation attempt {Attempt}: HTTP {Status} in {ElapsedMs} ms, transient={Transient}",
-                        attempt, status, stopwatch.ElapsedMilliseconds, transient);
+                        "OpenAI {Purpose} attempt {Attempt}: HTTP {Status} in {ElapsedMs} ms, transient={Transient}",
+                        purpose, attempt, status, stopwatch.ElapsedMilliseconds, transient);
                     if (!transient || isLastAttempt)
                     {
                         return null;
@@ -88,8 +152,8 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
                 }
                 catch (HttpRequestException exception)
                 {
-                    logger.LogWarning("OpenAI explanation attempt {Attempt}: network error {ErrorType} ({HttpError})",
-                        attempt, exception.GetType().Name, exception.HttpRequestError);
+                    logger.LogWarning("OpenAI {Purpose} attempt {Attempt}: network error {ErrorType} ({HttpError})",
+                        purpose, attempt, exception.GetType().Name, exception.HttpRequestError);
                     if (isLastAttempt)
                     {
                         return null;
@@ -102,41 +166,42 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             logger.LogWarning(
-                "OpenAI explanation: total deadline {DeadlineSeconds} s exceeded after {Attempts} attempt(s), {ElapsedMs} ms",
-                options.TotalTimeout.TotalSeconds, attempt, total.ElapsedMilliseconds);
+                "OpenAI {Purpose}: total deadline {DeadlineSeconds} s exceeded after {Attempts} attempt(s), {ElapsedMs} ms",
+                purpose, options.TotalTimeout.TotalSeconds, attempt, total.ElapsedMilliseconds);
         }
         catch (OperationCanceledException)
         {
-            logger.LogInformation("OpenAI explanation cancelled by client");
+            logger.LogInformation("OpenAI {Purpose} cancelled by client", purpose);
         }
 
         return null;
     }
 
-    private string BuildRequestBody(string input, ClaimCatalog catalog)
+    private string BuildRequestBody(string instructions, string input, string schemaName, JsonObject schema)
     {
         var body = new JsonObject
         {
             ["model"] = options.Model,
             ["store"] = false,
             ["max_output_tokens"] = 1000,
-            ["instructions"] = Instructions,
-            ["input"] = "Результат расчёта и проверенные утверждения (JSON):\n" + input,
+            ["instructions"] = instructions,
+            ["input"] = input,
             ["text"] = new JsonObject
             {
                 ["format"] = new JsonObject
                 {
                     ["type"] = "json_schema",
-                    ["name"] = "claim_priorities",
+                    ["name"] = schemaName,
                     ["strict"] = true,
-                    ["schema"] = OrderSchema(catalog),
+                    ["schema"] = schema,
                 },
             },
         };
         return body.ToJsonString();
     }
 
-    private ClaimOrder? ParseResponse(string payload, ClaimCatalog catalog, int attempt, int status, long elapsedMs)
+    /// <summary>The single structured output_text of a completed response, or null for any other shape.</summary>
+    private string? ExtractOutputText(string purpose, string payload, int attempt, int status, long elapsedMs)
     {
         JsonDocument document;
         try
@@ -145,7 +210,7 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
         }
         catch (JsonException)
         {
-            logger.LogWarning("OpenAI explanation attempt {Attempt}: HTTP {Status}, response is not JSON", attempt, status);
+            logger.LogWarning("OpenAI {Purpose} attempt {Attempt}: HTTP {Status}, response is not JSON", purpose, attempt, status);
             return null;
         }
 
@@ -154,19 +219,19 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
         var responseStatus = StringProperty(root, "status");
         if (root.ValueKind != JsonValueKind.Object || responseStatus != "completed")
         {
-            logger.LogWarning("OpenAI explanation rejected: response is not a completed object");
+            logger.LogWarning("OpenAI {Purpose} rejected: response is not a completed object", purpose);
             return null;
         }
 
         root.TryGetProperty("usage", out var usage);
         logger.LogInformation(
-            "OpenAI explanation attempt {Attempt}: HTTP {Status}, response status {ResponseStatus}, {ElapsedMs} ms, tokens input={InputTokens} output={OutputTokens} total={TotalTokens}",
-            attempt, status, responseStatus, elapsedMs,
+            "OpenAI {Purpose} attempt {Attempt}: HTTP {Status}, response status {ResponseStatus}, {ElapsedMs} ms, tokens input={InputTokens} output={OutputTokens} total={TotalTokens}",
+            purpose, attempt, status, responseStatus, elapsedMs,
             TokenCount(usage, "input_tokens"), TokenCount(usage, "output_tokens"), TokenCount(usage, "total_tokens"));
 
         if (!root.TryGetProperty("output", out var output) || output.ValueKind != JsonValueKind.Array)
         {
-            logger.LogWarning("OpenAI explanation rejected: output is not an array");
+            logger.LogWarning("OpenAI {Purpose} rejected: output is not an array", purpose);
             return null;
         }
 
@@ -180,7 +245,7 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
 
             if (!item.TryGetProperty("content", out var contents) || contents.ValueKind != JsonValueKind.Array)
             {
-                logger.LogWarning("OpenAI explanation rejected: message content is not an array");
+                logger.LogWarning("OpenAI {Purpose} rejected: message content is not an array", purpose);
                 return null;
             }
 
@@ -189,13 +254,13 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
                 switch (StringProperty(content, "type"))
                 {
                     case "refusal":
-                        logger.LogWarning("OpenAI explanation rejected: model refusal");
+                        logger.LogWarning("OpenAI {Purpose} rejected: model refusal", purpose);
                         return null;
                     case "output_text":
                         // One structured answer is expected. Never guess which of several answers to trust.
                         if (text is not null || StringProperty(content, "text") is not { } answer)
                         {
-                            logger.LogWarning("OpenAI explanation rejected: invalid or multiple output_text values");
+                            logger.LogWarning("OpenAI {Purpose} rejected: invalid or multiple output_text values", purpose);
                             return null;
                         }
                         text = answer;
@@ -206,17 +271,10 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
 
         if (text is null)
         {
-            logger.LogWarning("OpenAI explanation rejected: no output_text");
-            return null;
+            logger.LogWarning("OpenAI {Purpose} rejected: no output_text", purpose);
         }
 
-        if (!ExplanationValidator.TryParse(text, catalog, out var order, out var reason))
-        {
-            logger.LogWarning("OpenAI explanation rejected by validation: {Reason}", reason);
-            return null;
-        }
-
-        return order;
+        return text;
     }
 
     private static string? StringProperty(JsonElement element, string name) =>

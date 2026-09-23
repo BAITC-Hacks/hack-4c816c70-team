@@ -20,6 +20,7 @@ public static class ChoiceValidator
         public const string BudgetExceeded = "BUDGET_EXCEEDED";
         public const string CategoryLimitExceeded = "CATEGORY_LIMIT_EXCEEDED";
         public const string IncompatibleMeasures = "INCOMPATIBLE_MEASURES";
+        public const string InvalidGoal = "INVALID_GOAL";
     }
 
     public static (IReadOnlyList<ValidatedChoice>? Choices, ValidationFailure? Failure) Validate(EvaluateRequest? request)

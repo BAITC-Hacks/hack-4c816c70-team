@@ -117,6 +117,75 @@ await test('Swagger successful examples match real responses and errors have sta
     assert.equal(post.responses['400'].content['application/json'].examples[name].value.error.code,code);
   assert.equal(post.responses['422'].content['application/json'].examples.overBudget.value.error.code,'BUDGET_EXCEEDED');
 });
+// ---- POST /api/simulations/alternatives ----
+const altPlans=[];
+async function checkAlternatives(cs,goal,language) {
+  const r=await req('/api/simulations/alternatives',{choices:cs,goal},language?{headers:{'Accept-Language':language}}:{});
+  assert.equal(r.status,200,JSON.stringify(r.body)); const b=r.body;
+  assert.equal(b.goal,goal); assert.equal(b.searchScope,'single_swap'); assert.equal(b.candidatesChecked,265);
+  assert.ok(b.validCandidates>0&&b.validCandidates<=265); assert.equal(r.headers['content-language'],b.locale);
+  assert.deepEqual(Object.keys(b.bestByGoal).sort(),['economy','equity','score']);
+  const plans=[b.original,...b.variants.map(v=>v.plan)];
+  for(const p of plans) {
+    // Every returned plan re-evaluates with the same numbers, and matches the independent arithmetic oracle.
+    const e=await req('/api/simulations/evaluate',{choices:p.choices}); assert.equal(e.status,200);
+    assert.equal(p.score,e.body.score); assert.equal(p.spent,e.body.spent); assert.equal(p.remaining,e.body.remaining);
+    assert.deepEqual(p.breakdown,e.body.breakdown); assert.deepEqual(p.districts.map(d=>[d.id,d.score]),e.body.districts.map(d=>[d.id,d.scoreAfter]));
+    assert.equal(p.score,calc(p.choices).score); altPlans.push(p);
+  }
+  assert.equal(new Set(b.variants.map(v=>v.id)).size,b.variants.length,'each plan once');
+  for(const v of b.variants) {
+    assert.equal(v.plan.choices.filter(c=>!b.original.choices.some(o=>o.measureId===c.measureId&&o.districtId===c.districtId)).length,1,'one changed choice');
+    assert.equal(v.delta.spent,v.plan.spent-b.original.spent);
+    assert.equal(v.delta.score,round(Math.round(v.plan.score*100)-Math.round(b.original.score*100),100));
+    assert.equal(v.delta.score<0,v.tradeoffs.some(t=>t.id==='score_down'),'Score loss is explicit');
+    for(const g of v.strategies) assert.equal(b.bestByGoal[g],v.id);
+  }
+  const best=b.bestByGoal[goal], rec=b.recommendation;
+  if(best===null) { assert.equal(rec.status,'no_improvement'); assert.equal(rec.variantId,null); assert.deepEqual([rec.arguments,rec.tradeoffs],[[],[]]); }
+  else {
+    const v=b.variants.find(x=>x.id===best), metric={score:p=>p.score,equity:p=>p.breakdown.minDistrictScore,economy:p=>-p.spent}[goal];
+    assert.ok(metric(v.plan)>metric(b.original),'offered only on improvement');
+    assert.equal(rec.status,'improved'); assert.equal(rec.variantId,best); assert.equal(rec.source,'mock');
+    for(const t of v.tradeoffs.filter(t=>['score_down','min_district_down','critical_up'].includes(t.id))) assert.ok(rec.tradeoffs.some(x=>x.id===t.id));
+  }
+  return b;
+}
+await test('alternatives: control plan, all goals and languages, every plan re-evaluates identically',async()=>{
+  const texts=new Set(); let numbers;
+  for(const goal of ['score','equity','economy']) for(const language of ['ru-RU','kk-KZ','en-US']) {
+    const b=await checkAlternatives(valid,goal,language); assert.equal(b.locale,language);
+    if(goal==='score') { texts.add(b.recommendation.text); const n=JSON.stringify([b.bestByGoal,b.variants.map(v=>[v.plan,v.delta])]); numbers??=n; assert.equal(n,numbers); }
+  }
+  assert.equal(texts.size,3,'three languages');
+  const b=await checkAlternatives(valid,'score');
+  assert.equal(b.original.score,56.54); assert.equal(b.original.spent,95); assert.equal(b.validCandidates,117);
+  assert.deepEqual(b.bestByGoal,{score:'alt_M5_M3_nura',equity:'alt_M5_M3_nura',economy:'alt_M5_M11_nura'});
+});
+await test('alternatives: 25 seeded valid plans × 3 goals',async()=>{
+  let found=0, lowered=0;
+  for(let i=0;found<25&&i<400;i++) { const pool=[...s.measures],cs=[];for(let j=0;j<5;j++){const m=pool.splice(rand(pool.length),1)[0];cs.push({measureId:m.id,...m.scope==='district'?{districtId:s.districts[rand(5)].id}:{}});}
+    if(validation(cs)) continue; found++;
+    for(const goal of ['score','equity','economy']) { const b=await checkAlternatives(cs,goal); if(goal==='economy'&&b.bestByGoal.economy&&b.variants.find(v=>v.id===b.bestByGoal.economy).delta.score<0) lowered++; }
+  }
+  assert.equal(found,25); result.observations.economyLowersScore=lowered;
+});
+for(const [name,body,status,code] of [
+  ['alternatives: missing goal',{choices:valid},400,'INVALID_GOAL'],['alternatives: unknown goal',{choices:valid,goal:'Score'},400,'INVALID_GOAL'],
+  ['alternatives: missing choices',{goal:'score'},400,'INVALID_REQUEST'],['alternatives: malformed JSON','{',400,'INVALID_REQUEST'],
+  ['alternatives: wrong count',{choices:valid.slice(0,4),goal:'score'},400,'WRONG_CHOICE_COUNT'],
+  ['alternatives: over budget',{choices:[valid[0],valid[1],{measureId:'M13',districtId:'almaty'},valid[3],valid[4]],goal:'economy'},422,'BUDGET_EXCEEDED']])
+  await test(name,async()=>{const r=await req('/api/simulations/alternatives',body);assert.equal(r.status,status);assert.equal(r.body.error?.code,code);});
+await test('alternatives: Swagger examples match real responses',async()=>{
+  const post=swagger.paths['/api/simulations/alternatives'].post;
+  for(const goal of ['score','equity','economy']) {
+    const request=post.requestBody.content['application/json'].examples[goal].value;
+    const actual=await req('/api/simulations/alternatives',request,{headers:{'Accept-Language':'ru-RU'}});
+    assert.deepEqual(actual.body,post.responses['200'].content['application/json'].examples[goal].value);
+  }
+  assert.equal(post.responses['400'].content['application/json'].examples.invalidGoal.value.error.code,'INVALID_GOAL');
+  assert.equal(post.responses['422'].content['application/json'].examples.overBudget.value.error.code,'BUDGET_EXCEEDED');
+});
 await test('evaluation contains applied effects required by task',()=>assert.ok(Array.isArray(control.body.appliedEffects),'appliedEffects absent in successful response'));
 await test('CORS allowed vs foreign origin',async()=>{for(const [origin,allow] of [[process.env.TEST_FRONTEND_ORIGIN||'http://localhost:3000',true],['https://untrusted.invalid',false]]){const r=await req('/api/simulations/evaluate',undefined,{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type'}});assert.equal(r.headers['access-control-allow-origin'],allow?origin:undefined);}});
 await test('API does not expose .env',async()=>{const r=await req('/.env'); assert.ok(r.status>=400);assert.ok(!String(r.body).includes('OPENAI_API_KEY='));});
