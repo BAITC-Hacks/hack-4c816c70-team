@@ -31,11 +31,8 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
         - strengths: 2–4 пункта — какие меры и районы дали наибольший вклад (scoreImpact, изменения показателей, синергии).
         - risks: 2–4 пункта — оставшиеся критические значения ниже 40, самый слабый район, неполный эффект из-за лага,
           районы и направления без улучшений.
-        - recommendations: 2–4 пункта. Конкретные меры предлагай только из списка alternatives: это замены одной
-          выбранной меры, которые сервер уже проверил на бюджет, лимит направлений, выбор района и несовместимости,
-          и посчитал для них scoreAfter и scoreDelta. Не предлагай добавить меру сверх пяти, не комбинируй несколько
-          замен и не называй другие ID мер. Если alternatives пуст — дай качественные советы без ID мер.
-        - В strengths и risks упоминай только выбранные меры.
+        - Рекомендации не пиши: их формирует сервер из проверенных замен. Не предлагай замены, новые меры и переносы.
+        - Упоминай только выбранные меры и только в их районе из поля district.
         - Пиши кратко, каждый пункт — одно-два предложения, без markdown.
         """;
 
@@ -47,9 +44,8 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
             ["summary"] = new JsonObject { ["type"] = "string" },
             ["strengths"] = StringArray(),
             ["risks"] = StringArray(),
-            ["recommendations"] = StringArray(),
         },
-        ["required"] = new JsonArray("summary", "strengths", "risks", "recommendations"),
+        ["required"] = new JsonArray("summary", "strengths", "risks"),
         ["additionalProperties"] = false,
     };
 

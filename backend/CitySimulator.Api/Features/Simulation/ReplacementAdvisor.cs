@@ -2,12 +2,19 @@ using CitySimulator.Api.Features.Scenario;
 
 namespace CitySimulator.Api.Features.Simulation;
 
+/// <summary>
+/// One swap applied on its own. <c>ReplaceDistrict</c> is where the removed measure was;
+/// <c>WithDistrict</c> is where the new measure goes ("все районы" for city measures).
+/// </summary>
 public sealed record ReplacementOption(
     string ReplaceMeasureId,
+    string ReplaceMeasureName,
+    string? ReplaceDistrictId,
+    string ReplaceDistrict,
     string WithMeasureId,
     string WithMeasureName,
-    string? DistrictId,
-    string District,
+    string? WithDistrictId,
+    string WithDistrict,
     int SpentAfter,
     double ScoreAfter,
     double ScoreDelta);
@@ -18,6 +25,8 @@ public sealed record ReplacementOption(
 /// </summary>
 public static class ReplacementAdvisor
 {
+    public const string CityWide = "все районы";
+
     public static IReadOnlyList<ReplacementOption> Find(IReadOnlyList<ValidatedChoice> choices, double currentScore, int max = 5)
     {
         var current = ScoreCalculator.Round(currentScore);
@@ -62,10 +71,13 @@ public static class ReplacementAdvisor
 
                     options.Add(new ReplacementOption(
                         replaced.Measure.Id,
+                        replaced.Measure.Name,
+                        replaced.District?.Id,
+                        replaced.District?.Name ?? CityWide,
                         measure.Id,
                         measure.Name,
                         district?.Id,
-                        district?.Name ?? "все районы",
+                        district?.Name ?? CityWide,
                         validated!.Sum(c => c.Measure.Cost),
                         score,
                         delta));
@@ -76,7 +88,7 @@ public static class ReplacementAdvisor
         // Best district per (replace, with) pair, then the strongest swaps overall.
         return options
             .GroupBy(o => (o.ReplaceMeasureId, o.WithMeasureId))
-            .Select(g => g.OrderByDescending(o => o.ScoreAfter).ThenBy(o => o.DistrictId).First())
+            .Select(g => g.OrderByDescending(o => o.ScoreAfter).ThenBy(o => o.WithDistrictId).First())
             .OrderByDescending(o => o.ScoreAfter)
             .ThenBy(o => o.ReplaceMeasureId, StringComparer.Ordinal)
             .ThenBy(o => o.WithMeasureId, StringComparer.Ordinal)

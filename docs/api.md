@@ -76,13 +76,20 @@ Response `200` for this request (actual output; `districts` shortened to Nura, t
     "summary": "Итоговый Score 56.54 против базового 52.56 (+3.98). Потрачено 95 из 100. ...",
     "strengths": ["Наибольший рост в районе Нура: +3.78 к оценке района.", "Сработала синергия M10 + M12: B1 +2 в районе Нура."],
     "risks": ["Самый слабый район Нура (52.96) определяет 30% итогового балла."],
-    "recommendations": ["Сравните набор с альтернативами, заменив меру с наименьшим вкладом."]
+    "recommendations": [
+      "Заменить M5 (Сарыарка) на M3 (Нура). При этой отдельной замене Score 57.21 (+0.67), расходы 100 из 100.",
+      "Заменить M5 (Сарыарка) на M14 (все районы). При этой отдельной замене Score 56.99 (+0.45), расходы 86 из 100.",
+      "Заменить M5 (Сарыарка) на M2 (все районы). При этой отдельной замене Score 56.88 (+0.34), расходы 92 из 100.",
+      "Варианты замен независимы и применяются по отдельности: их эффекты не суммируются."
+    ]
   },
   "explanationSource": "mock"
 }
 ```
 
-`explanationSource` is `"llm"` when the text came from OpenAI and passed validation, otherwise `"mock"` (deterministic template). The shape of `explanation` is the same in both cases.
+`explanationSource` is `"llm"` when `summary`, `strengths` and `risks` came from OpenAI and passed validation, otherwise `"mock"` (deterministic template). The shape of `explanation` is the same in both cases.
+
+`recommendations` are always built by the server, in both modes, from validated single-measure replacements (see "AI explanation"). Up to three items of the form `Заменить <id> (<district of the removed measure>) на <id> (<district of the new measure>).` — or `Перенести <id>: <from> → <to>.` when the same measure moves to another district — followed by `При этой отдельной замене Score <scoreAfter> (+<delta>), расходы <spent> из 100.` City measures are shown as `все районы`. The last item says that the replacements are independent and applied one at a time (their effects do not add up). If no single replacement improves Score, the only item is «Ни одна допустимая замена одной меры не повышает Score — отдельной заменой набор не улучшить.»
 
 Scoring (C#, `Features/Simulation/ScoreCalculator.cs`), per `docs/reference/district-dataset.docx`:
 
@@ -103,13 +110,15 @@ Environment variables (read by the API at startup; none is required to build or 
 | `OPENAI_BASE_URL` | `https://api.openai.com/v1/` | Optional, for a proxy or a local stub in tests |
 | `FRONTEND_ORIGIN` | `http://localhost:3000` | CORS origin of the frontend; comma-separated list allowed |
 
-In `live` mode the API sends the model only numbers already computed by `ScoreCalculator`: Score and its parts before/after, all districts with all ten indicators (before, after, delta, critical flag), each chosen measure with its realized share `(8 − L) / 8`, lag-adjusted effects and `scoreImpact` (Score minus Score of the same set without this measure), applied synergies, remaining critical values and `alternatives`.
+In `live` mode the API sends the model only numbers already computed by `ScoreCalculator`: Score and its parts before/after, all districts with all ten indicators (before, after, delta, critical flag), each chosen measure with its realized share `(8 − L) / 8`, lag-adjusted effects and `scoreImpact` (Score minus Score of the same set without this measure), applied synergies and remaining critical values. Replacements are not sent to the model, and the model does not write recommendations.
 
-`alternatives` (up to 5) are single-measure replacements that raise Score. The server builds each candidate set, runs the same validation as this endpoint (exactly 5, budget ≤ 100, ≤ 2 per category, district scope, incompatibilities), scores it with `ScoreCalculator` and keeps the best district per pair: `{ replaceMeasureId, withMeasureId, withMeasureName, districtId, district, spentAfter, scoreAfter, scoreDelta }`. Recommendations name measures only from this list; the mock explanation uses the top two, e.g. «Замена M5 на M3 (Нура) даёт Score 57.21 (+0.67) при стоимости набора 100.». `alternatives` are not a separate response field. The request uses `POST /v1/responses` with `store: false` and Structured Outputs (`text.format.type = json_schema`, `strict: true`) whose schema is exactly `summary: string`, `strengths`, `risks`, `recommendations: string[]`, `additionalProperties: false`.
+Replacements (`Features/Simulation/ReplacementAdvisor.cs`): for every chosen measure the server tries every other catalog measure and the same measure in another district, runs the same validation as this endpoint (exactly 5, budget ≤ 100, ≤ 2 per category, district scope, incompatibilities), scores the set with `ScoreCalculator`, keeps only sets with a higher Score and the best district per pair. Each option knows the district of the removed measure and of the new one. Options are not a separate response field; `RecommendationBuilder` turns the top three into `recommendations` text.
 
-Before the text reaches the client the API checks: response status `completed`, no refusal, exactly these four fields, non-empty strings (summary ≤ 1200 chars, lists ≤ 8 items of ≤ 500 chars), every number in the text must be present in the computed facts (exact or rounded), and every measure ID (`M1`–`M14`) must be a chosen measure or a `withMeasureId` from `alternatives`. Otherwise the deterministic explanation is returned.
+The request uses `POST /v1/responses` with `store: false` and Structured Outputs (`text.format.type = json_schema`, `strict: true`) whose schema is exactly `summary: string`, `strengths: string[]`, `risks: string[]`, `additionalProperties: false`.
 
-The whole live analysis — all attempts and backoffs — has one 60 s deadline; when it expires the API immediately returns the `mock` explanation. Network errors and HTTP 408/409/429/5xx are retried at most twice within that deadline (backoff 1 s, 2 s). A request therefore waits at most about 60 s plus scoring time; a frontend request timeout of 75 s is enough. `score`, `districts` and all other numeric fields are identical in both modes. Logs contain attempt, HTTP status, elapsed time and token counts only — no key, request body or model text.
+Before the text reaches the client the API checks: response status `completed`, no refusal, exactly these three fields, non-empty strings (summary ≤ 1200 chars, lists ≤ 8 items of ≤ 500 chars), every number in the text must be present in the computed facts (exact or rounded), and every measure ID (`M1`–`M14`) in the text must be one of the chosen measures. Otherwise the deterministic explanation is returned. Server `recommendations` are then added to the model's three fields.
+
+The whole live analysis — all attempts and backoffs — has one 60 s deadline; when it expires the API immediately returns the `mock` explanation. Network errors and HTTP 408/409/429/5xx are retried at most twice within that deadline (backoff 1 s, 2 s). A request therefore waits at most about 60 s plus scoring time; a frontend request timeout of 75 s is enough. `score`, `districts` and all other numeric fields are identical in both modes. Logs contain attempt, HTTP status, elapsed time and token counts, plus rejected numeric values when number validation fails — no key, request body or full model text.
 
 ### Errors
 

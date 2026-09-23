@@ -63,26 +63,7 @@ public static class ExplanationBuilder
                 $"Меры с долгим лагом ({string.Join(", ", slowMeasures)}) реализуют лишь часть эффекта за горизонт {ScenarioData.HorizonQuarters} кварталов.");
         }
 
-        // Only server-validated swaps (budget, category limit, incompatibilities already checked).
-        var recommendations = alternatives
-            .Take(2)
-            .Select(a =>
-                $"Замена {a.ReplaceMeasureId} на {a.WithMeasureId} ({a.District}) даёт Score {F(a.ScoreAfter)} ({Signed(a.ScoreDelta)}) при стоимости набора {a.SpentAfter}.")
-            .ToList();
-
-        if (recommendations.Count == 0)
-        {
-            recommendations.Add("Ни одна допустимая замена одной меры не повышает Score — набор локально оптимален.");
-        }
-
-        var remaining = ScenarioData.Budget - spent;
-        if (remaining >= 10)
-        {
-            recommendations.Add(
-                $"Остаток {remaining} не даёт бонуса — его можно направить на более дорогую меру с большим эффектом.");
-        }
-
-        return new Explanation(summary, strengths, risks, recommendations);
+        return new Explanation(summary, strengths, risks, RecommendationBuilder.Build(alternatives));
     }
 
     private static DistrictState Weakest(SimulationOutcome outcome) => outcome.Districts.MinBy(s => s.Score)!;
