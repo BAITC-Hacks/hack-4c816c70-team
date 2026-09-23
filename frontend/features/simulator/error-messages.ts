@@ -25,5 +25,5 @@ export function formatSimulationError(error: SimulationError, locale: Locale): s
   const copy = messages[locale];
   if (error.code && knownCodes.includes(error.code as (typeof knownCodes)[number])) return copy.codes[error.code as (typeof knownCodes)[number]];
   const base = error.kind === "network" ? copy.network : error.kind === "timeout" ? copy.timeout : error.kind === "invalid-json" ? copy.invalidJson : error.kind === "contract" ? copy.contract : error.kind === "http" ? copy.http(error.status) : copy.unknown;
-  return error.code || error.kind === "http" || error.kind === "contract" ? `${base} ${error.detail ?? ""}`.trim() : base;
+  return base;
 }
