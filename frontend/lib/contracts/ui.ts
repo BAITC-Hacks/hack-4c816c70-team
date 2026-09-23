@@ -1,0 +1,186 @@
+/**
+ * Internal component contract. This is NOT the backend DTO or an OpenAPI schema.
+ * The API adapter maps the published backend contract into these view models.
+ * No simulation calculations belong here.
+ */
+export type IndicatorId =
+  | "T1" | "T2" | "E1" | "E2" | "S1"
+  | "S2" | "B1" | "B2" | "C1" | "C2";
+
+export type CategoryId = "transport" | "ecology" | "social" | "safety" | "services";
+export type DistrictId = string;
+export type MeasureId = string;
+export type IndicatorValues = Readonly<Record<IndicatorId, number>>;
+export type IndicatorEffects = Readonly<Partial<Record<IndicatorId, number>>>;
+
+export interface IndicatorVM {
+  readonly id: IndicatorId;
+  readonly name: string;
+  readonly weight: number;
+}
+
+export interface DistrictVM {
+  readonly id: DistrictId;
+  readonly name: string;
+  readonly populationShare: number;
+  readonly indicators: IndicatorValues;
+  /** Only populate when supplied by the backend. */
+  readonly score?: number;
+}
+
+export interface MeasureVM {
+  readonly id: MeasureId;
+  readonly category: CategoryId;
+  readonly name: string;
+  readonly scope: "district" | "city";
+  readonly cost: number;
+  readonly lagQuarters: number;
+  /** Full catalog effects, not the effects realized after lag. */
+  readonly effects: IndicatorEffects;
+}
+
+export interface IncompatibilityVM {
+  readonly measureIds: readonly [MeasureId, MeasureId];
+  readonly scope: "global" | "same-district";
+  readonly reason: string;
+}
+
+export interface SynergyRuleVM {
+  readonly measureIds: readonly [MeasureId, MeasureId];
+  /** The bonus belongs to the district selected for this measure. */
+  readonly targetMeasureId: MeasureId;
+  readonly effects: IndicatorEffects;
+}
+
+export interface SelectionRulesVM {
+  readonly requiredChoices: number;
+  readonly maxPerCategory: number;
+  readonly uniqueMeasures: true;
+  readonly incompatibilities: readonly IncompatibilityVM[];
+  readonly synergies: readonly SynergyRuleVM[];
+}
+
+export interface ScenarioVM {
+  readonly budget: number;
+  readonly horizonQuarters: number;
+  readonly criticalThreshold: number;
+  readonly baselineScore: number;
+  readonly indicators: readonly IndicatorVM[];
+  readonly districts: readonly DistrictVM[];
+  readonly measures: readonly MeasureVM[];
+  /** Pending rules must be shown as unavailable; never assume empty rules. */
+  readonly rules: SelectionRulesVM | null;
+  readonly source: "api" | "fixture";
+}
+
+/** Incomplete district selection is allowed only while editing the draft. */
+export interface ChoiceDraft {
+  readonly measureId: MeasureId;
+  readonly districtId?: DistrictId;
+}
+
+/** Frontend form codes. These do not claim to be the backend error codes. */
+export type SelectionIssueCode =
+  | "rules-unavailable"
+  | "choice-count"
+  | "duplicate-measure"
+  | "unknown-measure"
+  | "category-limit"
+  | "budget-exceeded"
+  | "district-required"
+  | "invalid-district"
+  | "district-for-city"
+  | "incompatible";
+
+export interface SelectionIssue {
+  readonly code: SelectionIssueCode;
+  readonly message: string;
+  readonly measureIds?: readonly MeasureId[];
+  readonly districtId?: DistrictId;
+}
+
+export interface DraftValidation {
+  readonly issues: readonly SelectionIssue[];
+  readonly canSubmit: boolean;
+  readonly provisionalSpent: number;
+  readonly provisionalRemaining: number;
+}
+
+/** Claude 2 exports a function with this signature as validateDraft. */
+export type ValidateDraft = (
+  scenario: ScenarioVM,
+  choices: readonly ChoiceDraft[],
+) => DraftValidation;
+
+export interface CityOverviewProps {
+  readonly scenario: ScenarioVM;
+  readonly selectedDistrictId: DistrictId | null;
+  readonly onSelectDistrict: (districtId: DistrictId) => void;
+  readonly onStartPlanning: () => void;
+}
+
+export interface PlannerProps {
+  readonly scenario: ScenarioVM;
+  readonly choices: readonly ChoiceDraft[];
+  readonly preferredDistrictId: DistrictId | null;
+  readonly isEvaluating: boolean;
+  readonly serverError: string | null;
+  readonly onChoicesChange: (choices: readonly ChoiceDraft[]) => void;
+  readonly onEvaluate: () => void;
+  readonly onBack: () => void;
+}
+
+export interface DistrictResultVM {
+  readonly id: DistrictId;
+  readonly name: string;
+  readonly scoreBefore: number;
+  readonly scoreAfter: number;
+  readonly indicatorsBefore: IndicatorValues;
+  readonly indicatorsAfter: IndicatorValues;
+  /** Optional until the backend explicitly supplies delta fields. */
+  readonly scoreDelta?: number;
+  readonly indicatorDeltas?: IndicatorEffects;
+}
+
+export interface AppliedEffectVM {
+  readonly measureId: MeasureId;
+  readonly districtId: DistrictId;
+  readonly indicatorId: IndicatorId;
+  readonly delta: number;
+}
+
+export interface AppliedSynergyVM {
+  readonly measureIds: readonly [MeasureId, MeasureId];
+  readonly districtId: DistrictId;
+  readonly indicatorId: IndicatorId;
+  readonly delta: number;
+}
+
+export interface ExplanationVM {
+  readonly summary: string;
+  readonly strengths: readonly string[];
+  readonly risks: readonly string[];
+  readonly recommendations: readonly string[];
+}
+
+export interface EvaluationVM {
+  readonly spent: number;
+  readonly remaining: number;
+  readonly baselineScore: number;
+  readonly score: number;
+  readonly scoreDelta?: number;
+  readonly districts: readonly DistrictResultVM[];
+  /** null means missing in the response; [] means supplied and empty. */
+  readonly appliedEffects: readonly AppliedEffectVM[] | null;
+  readonly appliedSynergies: readonly AppliedSynergyVM[];
+  readonly explanation: ExplanationVM;
+  readonly source: "api" | "fixture";
+}
+
+export interface ResultsProps {
+  readonly scenario: ScenarioVM;
+  readonly result: EvaluationVM;
+  readonly submittedChoices: readonly ChoiceDraft[];
+  readonly onEdit: () => void;
+  readonly onReset: () => void;
+}
