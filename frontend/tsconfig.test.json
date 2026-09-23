@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": ".test-build",
+    "noEmit": false,
+    "incremental": false,
+    "verbatimModuleSyntax": false
+  },
+  "include": ["tests/**/*.test.ts", "features/simulator/simulator-reducer.ts", "features/planner/selection-rules.test.ts", "features/planner/selection-rules.ts", "features/planner/labels.ts", "lib/api/errors.ts", "lib/api/payload.ts", "lib/contracts/api.generated.ts", "lib/contracts/ui.ts"]
+}

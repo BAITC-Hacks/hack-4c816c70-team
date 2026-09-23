@@ -1,0 +1,14 @@
+.results { max-width: 1440px; margin: 0 auto; padding: 32px 24px 64px; color: var(--color-ink, #142D38); }
+.header, .actions, .topGrid, .district header { display: flex; align-items: center; gap: 16px; }
+.header { justify-content: space-between; margin-bottom: 28px; }
+.actions { flex-wrap: wrap; }
+.actions button { min-height: 44px; border: 1px solid var(--color-accent, #006B60); border-radius: 8px; background: var(--color-surface, #fff); color: var(--color-accent, #006B60); padding: 10px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+.actions button:first-child { background: var(--color-accent, #006B60); color: white; }
+.eyebrow { color: var(--color-muted, #536671); font-size: .875rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.header h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.5rem); }
+.topGrid { align-items: stretch; display: grid; grid-template-columns: 1.4fr 1fr; margin-bottom: 32px; }
+.score, .budget, .district, .synergies, .explanation { background: var(--color-surface, #fff); border: 1px solid var(--color-border, #D7E1DC); border-radius: var(--radius-panel, 20px); padding: 24px; }
+.scoreValues { display: flex; align-items: center; gap: 16px; font-variant-numeric: tabular-nums; font-size: clamp(2.5rem, 7vw, 4.5rem); line-height: 1; }
+.scoreValues strong { font-weight: 750; }.positive { color: var(--color-accent, #006B60); }.negative { color: var(--color-danger, #B42332); }
+.districtGrid { display: grid; gap: 12px; }.district header { justify-content: space-between; flex-wrap: wrap; }.district h3 { margin: 0; }.district header span { font-variant-numeric: tabular-nums; }.district details { margin-top: 16px; }.district summary { cursor: pointer; font-weight: 700; }.indicators { display: grid; gap: 10px; margin: 16px 0 0; }.indicators div { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(220px, 1fr); gap: 12px; border-top: 1px solid var(--color-border, #D7E1DC); padding-top: 8px; }.indicators dd { margin: 0; font-variant-numeric: tabular-nums; }.indicators em { color: var(--color-warning, #8A4B08); font-size: .875rem; font-style: normal; }.synergies, .explanation { margin-top: 32px; }.explanation h2, .synergies h2 { margin-top: 0; }
+@media (max-width: 700px) { .results { padding: 20px 16px 48px; }.header { align-items: flex-start; flex-direction: column; }.topGrid { grid-template-columns: 1fr; }.score, .budget, .district, .synergies, .explanation { padding: 16px; }.scoreValues { gap: 8px; }.indicators div { grid-template-columns: 1fr; gap: 4px; }.actions { width: 100%; }.actions button { flex: 1; } }
