@@ -3,7 +3,9 @@ import type { ApiEvaluateRequestDto, ApiExplanationLocale } from "@/lib/contract
 import type { EvaluationVM, ScenarioVM } from "@/lib/contracts/ui";
 import { ApiClientError, normalizeApiError } from "./errors";
 import type { ApiErrorKind } from "./errors";
-import { buildEvaluateRequestInit } from "./request";
+import { buildEvaluateRequestInit, buildAlternativesRequestInit } from "./request";
+import { alternativesToVm, parseAlternativesDto } from "./alternatives";
+import type { AlternativesRequest, AlternativesVM } from "../../features/alternatives/types";
 
 const DEFAULT_API_URL = "http://localhost:8080";
 /** Live server explanation can take up to 60 seconds; leave transport headroom. */
@@ -20,7 +22,8 @@ async function requestJson(path: string, init: RequestInit, signal?: AbortSignal
   const controller = new AbortController();
   const timeout = globalThis.setTimeout(() => controller.abort("timeout"), REQUEST_TIMEOUT_MS);
   const abortForwarder = () => controller.abort(signal?.reason);
-  signal?.addEventListener("abort", abortForwarder, { once: true });
+  if (signal?.aborted) abortForwarder();
+  else signal?.addEventListener("abort", abortForwarder, { once: true });
   try {
     const response = await fetch(`${normalizeApiUrl()}${path}`, { ...init, signal: controller.signal, headers: { Accept: "application/json", ...init.headers } });
     const text = await response.text();
@@ -50,4 +53,16 @@ export async function getScenario(signal?: AbortSignal): Promise<ScenarioVM> {
 export async function evaluateChoices(payload: ApiEvaluateRequestDto, signal?: AbortSignal, explanationLocale?: ApiExplanationLocale): Promise<EvaluationVM> {
   try { return evaluationToVm(parseEvaluationDto(await requestJson("/api/simulations/evaluate", buildEvaluateRequestInit(payload, explanationLocale), signal))); }
   catch (error) { if (error instanceof ApiClientError) throw error; throw new ApiClientError("contract", error instanceof Error ? error.message : "Некорректный контракт результата."); }
+}
+
+
+export async function getAlternatives(request: AlternativesRequest, signal: AbortSignal): Promise<AlternativesVM> {
+  try {
+    const dto = parseAlternativesDto(await requestJson("/api/simulations/alternatives", buildAlternativesRequestInit(request.choices, request.goal, request.locale), signal));
+    if (dto.goal !== request.goal) throw new ApiClientError("contract", "Alternatives goal does not match the request.");
+    return alternativesToVm(dto);
+  } catch (error) {
+    if (error instanceof ApiClientError) throw error;
+    throw new ApiClientError("contract", error instanceof Error ? error.message : "Invalid alternatives response.");
+  }
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
+import { alternativesMessages } from "@/features/alternatives";
 import { Planner } from "@/features/planner";
 import { useLocale, type Locale } from "@/lib/i18n";
 import { useSimulationContext } from "./SimulationProvider";
@@ -22,5 +23,5 @@ export function DecisionsPage() {
   const copy = messages[locale];
   if (state.scenario.status === "loading") return <main className={styles.state} aria-live="polite"><h1>{copy.loading}</h1></main>;
   if (state.scenario.status === "error") return <main className={styles.state} role="alert"><h1>{copy.failed}</h1><p>{formatSimulationError(state.scenario.error, locale)}</p><Button onClick={() => void loadScenario()}>{copy.retry}</Button><Link href="/">{copy.home}</Link></main>;
-  return <main className={styles.workspace}><Planner scenario={state.scenario.scenario} choices={state.choices} preferredDistrictId={state.selectedDistrictId} isEvaluating={state.evaluation.status === "pending"} serverError={state.evaluation.status === "error" ? formatSimulationError(state.evaluation.error, locale) : null} onChoicesChange={setChoices} onEvaluate={() => void evaluate()} onBack={() => router.push("/")} /></main>;
+  return <main className={styles.workspace}>{state.appliedAlternative ? <p className={styles.notice} role="status">{alternativesMessages[locale].applied}</p> : null}<Planner scenario={state.scenario.scenario} choices={state.choices} preferredDistrictId={state.selectedDistrictId} isEvaluating={state.evaluation.status === "pending"} serverError={state.evaluation.status === "error" ? formatSimulationError(state.evaluation.error, locale) : null} onChoicesChange={setChoices} onEvaluate={() => void evaluate()} onBack={() => router.push("/")} /></main>;
 }

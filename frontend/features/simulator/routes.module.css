@@ -34,3 +34,13 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+.notice {
+  width: min(100% - 2 * var(--page-gutter), var(--content-max));
+  margin: 0 auto var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}

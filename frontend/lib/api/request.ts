@@ -1,4 +1,4 @@
-import type { ApiEvaluateRequestDto, ApiExplanationLocale } from "../contracts/api.generated";
+import type { ApiAlternativeGoal, ApiChoiceDto, ApiEvaluateRequestDto, ApiExplanationLocale } from "../contracts/api.generated";
 
 /**
  * POST /api/simulations/evaluate init. The UI language goes only into Accept-Language;
@@ -8,4 +8,13 @@ export function buildEvaluateRequestInit(payload: ApiEvaluateRequestDto, explana
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (explanationLocale) headers["Accept-Language"] = explanationLocale;
   return { method: "POST", headers, body: JSON.stringify(payload) };
+}
+
+
+export function buildAlternativesRequestInit(choices: readonly ApiChoiceDto[], goal: ApiAlternativeGoal, locale: ApiExplanationLocale): RequestInit {
+  return {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept-Language": locale },
+    body: JSON.stringify({ choices, goal }),
+  };
 }
