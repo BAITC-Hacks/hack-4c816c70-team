@@ -2,9 +2,10 @@
 
 import { createContext, use, useCallback, useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { intlLocales, localeDocumentTitles, type IntlLocale, type Locale } from "./catalog";
+import { createLocaleStore, LOCALE_STORAGE_KEY } from "./locale-store";
 
-const storageKey = "akim-locale";
 const localeEvent = "akim-locale-change";
+const localeStore = createLocaleStore(() => window.localStorage);
 
 type LocaleContextValue = {
   readonly locale: Locale;
@@ -14,34 +15,24 @@ type LocaleContextValue = {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
-const isLocale = (value: string | null): value is Locale => value === "ru" || value === "kk" || value === "en";
-
-function readLocale(): Locale {
-  try {
-    const saved = window.localStorage.getItem(storageKey);
-    return isLocale(saved) ? saved : "ru";
-  } catch {
-    return "ru";
-  }
-}
-
 function subscribe(onStoreChange: () => void) {
-  window.addEventListener("storage", onStoreChange);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== LOCALE_STORAGE_KEY) return;
+    localeStore.useStorageSnapshot();
+    onStoreChange();
+  };
+  window.addEventListener("storage", onStorage);
   window.addEventListener(localeEvent, onStoreChange);
   return () => {
-    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener("storage", onStorage);
     window.removeEventListener(localeEvent, onStoreChange);
   };
 }
 
 export function LocaleProvider({ children }: { readonly children: ReactNode }) {
-  const locale = useSyncExternalStore<Locale>(subscribe, readLocale, () => "ru");
+  const locale = useSyncExternalStore<Locale>(subscribe, localeStore.getSnapshot, () => "ru");
   const setLocale = useCallback((nextLocale: Locale) => {
-    try {
-      window.localStorage.setItem(storageKey, nextLocale);
-    } catch {
-      // Private browsing or a disabled storage must not prevent language switching.
-    }
+    localeStore.setLocale(nextLocale);
     window.dispatchEvent(new Event(localeEvent));
   }, []);
 

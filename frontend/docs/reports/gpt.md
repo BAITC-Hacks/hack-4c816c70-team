@@ -82,3 +82,8 @@
 ### Блокер/передача Тамерлану
 
 Клиент **не добавляет** `Accept-Language` и не меняет тело POST, пока сервер не подтвердит контракт. Нужны: поддержка `Accept-Language: ru-RU | kk-KZ | en-US`, русский default, фактическое поле `explanationLocale: ru | kk | en`, локализованные mock/LLM explanation и стабильные error code. До этого server explanation честно обозначается как русскоязычный fallback.
+
+### Финальное исправление после localization review
+
+- Замечание P2 исправлено: `createLocaleStore` держит выбранный язык в памяти текущей вкладки, если `localStorage` запрещён, заполнен или выбрасывает исключение. При доступном storage он по-прежнему является источником для reload и события `storage` между вкладками.
+- Добавлены регрессии blocked-storage и normal-storage. Финальный прогон: `npm test` 46/46, `npm run lint`, `npm run typecheck`, `npm run build`, `git diff --check` — успешно.
