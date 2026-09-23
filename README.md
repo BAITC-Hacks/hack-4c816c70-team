@@ -379,3 +379,16 @@ docker compose -f docker-compose.yml -f docker-compose.brev.yml stop
 - `LLM_MODE=mock`, `OPENAI_API_KEY` пустой; ключи не нужны для этого развёртывания.
 
 Полный live-вызов LLM и отдельный чистый запуск именно в WSL Ubuntu этим прогоном не проверялись.
+
+## Регрессионные проверки исправлений
+
+Из корня проекта с .NET 8 SDK и Node 22+:
+
+```bash
+dotnet run --project backend/CitySimulator.RegressionTests -c Release
+node backend/tests/api-regression.mjs http://localhost:8080
+```
+
+Первый набор работает без ключа и сети модели: проверяет округление, эффекты и обработку повреждённых AI-ответов. Второй требует запущенный **тестовый API в режиме mock**, проверяет 400 наборов, 120 перестановок контрольного набора, валидацию и примеры Swagger. Он делает более 500 запросов — не запускайте его против публичного демо. Если CORS настроен не на `http://localhost:3000`, задайте `TEST_FRONTEND_ORIGIN` равным разрешённому origin. Ненулевой код завершения означает ошибку проверки.
+
+Подробности и шаги мобильной регрессии: [backend/CitySimulator.RegressionTests/README.md](backend/CitySimulator.RegressionTests/README.md).

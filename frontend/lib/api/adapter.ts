@@ -3,6 +3,7 @@ import type {
   ApiScenarioDto,
 } from "@/lib/contracts/api.generated";
 import type {
+  AppliedEffectVM,
   AppliedSynergyVM,
   CategoryId,
   DistrictResultVM,
@@ -130,13 +131,18 @@ export function parseEvaluationDto(value: unknown): ApiEvaluationDto {
     return { measureIds: [expectString(ids[0], `appliedSynergies[${index}].measureIds[0]`), expectString(ids[1], `appliedSynergies[${index}].measureIds[1]`)] as [string, string], districtId: expectString(dto.districtId, `appliedSynergies[${index}].districtId`), indicatorId: expectIndicatorId(dto.indicatorId, `appliedSynergies[${index}].indicatorId`), delta: expectNumber(dto.delta, `appliedSynergies[${index}].delta`) };
   });
   const explanation = expectRecord(root.explanation, "explanation");
+  const appliedEffects = root.appliedEffects === undefined ? undefined : expectArray(root.appliedEffects, "appliedEffects").map((item, index) => {
+    const path = `appliedEffects[${index}]`;
+    const dto = expectRecord(item, path);
+    return { measureId: expectString(dto.measureId, `${path}.measureId`), districtId: expectString(dto.districtId, `${path}.districtId`), indicatorId: expectIndicatorId(dto.indicatorId, `${path}.indicatorId`), delta: expectNumber(dto.delta, `${path}.delta`) };
+  });
   const stringList = (value: unknown, path: string) => expectArray(value, path).map((entry, index) => expectString(entry, `${path}[${index}]`));
   const explanationSource = expectString(root.explanationSource, "explanationSource");
   if (explanationSource !== "llm" && explanationSource !== "mock") throw new ApiContractError("Некорректный ответ API: неизвестный источник объяснения.");
   // Older API builds without the field always answered in Russian (documented fallback).
   const explanationLocale = root.explanationLocale === undefined ? "ru-RU" : expectString(root.explanationLocale, "explanationLocale");
   if (explanationLocale !== "ru-RU" && explanationLocale !== "kk-KZ" && explanationLocale !== "en-US") throw new ApiContractError("Некорректный ответ API: неизвестный язык объяснения.");
-  return { spent: expectNumber(root.spent, "spent"), remaining: expectNumber(root.remaining, "remaining"), baselineScore: expectNumber(root.baselineScore, "baselineScore"), score: expectNumber(root.score, "score"), districts, appliedSynergies, explanation: { summary: expectString(explanation.summary, "explanation.summary"), strengths: stringList(explanation.strengths, "explanation.strengths"), risks: stringList(explanation.risks, "explanation.risks"), recommendations: stringList(explanation.recommendations, "explanation.recommendations") }, explanationSource, explanationLocale };
+  return { spent: expectNumber(root.spent, "spent"), remaining: expectNumber(root.remaining, "remaining"), baselineScore: expectNumber(root.baselineScore, "baselineScore"), score: expectNumber(root.score, "score"), districts, appliedSynergies, appliedEffects, explanation: { summary: expectString(explanation.summary, "explanation.summary"), strengths: stringList(explanation.strengths, "explanation.strengths"), risks: stringList(explanation.risks, "explanation.risks"), recommendations: stringList(explanation.recommendations, "explanation.recommendations") }, explanationSource, explanationLocale };
 }
 
 export function evaluationToVm(dto: ApiEvaluationDto): EvaluationVM {
@@ -146,5 +152,6 @@ export function evaluationToVm(dto: ApiEvaluationDto): EvaluationVM {
     return { ...district, indicatorsBefore: district.indicatorsBefore as IndicatorValues, indicatorsAfter: district.indicatorsAfter as IndicatorValues, scoreDelta: district.scoreAfter - district.scoreBefore, indicatorDeltas };
   });
   const appliedSynergies: AppliedSynergyVM[] = dto.appliedSynergies.map((item) => ({ ...item, measureIds: item.measureIds, indicatorId: item.indicatorId as IndicatorId }));
-  return { spent: dto.spent, remaining: dto.remaining, baselineScore: dto.baselineScore, score: dto.score, scoreDelta: dto.score - dto.baselineScore, districts, appliedEffects: null, appliedSynergies, explanation: dto.explanation, explanationSource: dto.explanationSource, explanationLocale: dto.explanationLocale, source: "api" };
+  const appliedEffects: AppliedEffectVM[] | null = dto.appliedEffects?.map((item) => ({ ...item, indicatorId: item.indicatorId as IndicatorId })) ?? null;
+  return { spent: dto.spent, remaining: dto.remaining, baselineScore: dto.baselineScore, score: dto.score, scoreDelta: dto.score - dto.baselineScore, districts, appliedEffects, appliedSynergies, explanation: dto.explanation, explanationSource: dto.explanationSource, explanationLocale: dto.explanationLocale, source: "api" };
 }

@@ -28,7 +28,6 @@ interface DecisionTrayProps {
   readonly validation: DraftValidation;
   readonly potentialSynergies: readonly (readonly [MeasureId, MeasureId])[];
   readonly isEvaluating: boolean;
-  readonly serverError: string | null;
   readonly summaryRef: Ref<HTMLDivElement>;
   readonly headingRef: Ref<HTMLHeadingElement>;
   readonly onRemove: (measureId: MeasureId) => void;
@@ -55,7 +54,6 @@ export function DecisionTray({
   validation,
   potentialSynergies,
   isEvaluating,
-  serverError,
   summaryRef,
   headingRef,
   onRemove,
@@ -184,15 +182,6 @@ export function DecisionTray({
           </p>
         ) : null}
       </div>
-
-      {/* Текст ошибки сервера переводит GPT по code; здесь только локализованная рамка. */}
-      {serverError !== null ? (
-        <div className={styles.serverError} role="alert">
-          <p className={styles.summaryTitle}>{copy.serverResponse}</p>
-          <p>{serverError}</p>
-          <p className={styles.textMuted}>{copy.planSaved}</p>
-        </div>
-      ) : null}
 
       <Button
         size="lg"

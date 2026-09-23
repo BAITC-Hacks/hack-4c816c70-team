@@ -2,7 +2,7 @@
 
 Implemented in `backend/CitySimulator.Api`: `GET /health`, `GET /api/scenario`, `POST /api/simulations/evaluate`. Swagger UI: `http://localhost:8080/swagger`, schema: `/swagger/v1/swagger.json`.
 
-Base URL for local development: `http://localhost:8080`. JSON uses camelCase property names; dictionary keys (indicator ids such as `T1`) keep their case. All scores and indicator values in responses are rounded to 2 decimals; calculation runs at full precision.
+Base URL for local development: `http://localhost:8080`. JSON uses camelCase property names; dictionary keys (indicator ids such as `T1`) keep their case. All scores and indicator values in responses are rounded to 2 decimals (midpoint away from zero); calculation uses decimal arithmetic without intermediate rounding. Swagger includes complete request/response examples computed by the same implementation, including validation errors.
 
 Identifiers:
 
@@ -89,6 +89,19 @@ Response `200` for this request (actual output; `districts` shortened to Nura, t
     "indicatorsAfter": { "T1": 55, "T2": 40, "E1": 45, "E2": 65, "S1": 48, "S2": 43.75, "B1": 67.5, "B2": 51.75, "C1": 60, "C2": 54.38 }
   }],
   "appliedSynergies": [{ "measureIds": ["M10", "M12"], "districtId": "nura", "indicatorId": "B1", "delta": 2 }],
+  "appliedEffects": [
+    { "measureId": "M5", "districtId": "saryarka", "indicatorId": "E2", "delta": 8.75 },
+    { "measureId": "M5", "districtId": "saryarka", "indicatorId": "C1", "delta": 2.5 },
+    { "measureId": "M7", "districtId": "nura", "indicatorId": "S1", "delta": 10 },
+    { "measureId": "M8", "districtId": "nura", "indicatorId": "S2", "delta": 8.75 },
+    { "measureId": "M10", "districtId": "nura", "indicatorId": "B1", "delta": 10.5 },
+    { "measureId": "M10", "districtId": "nura", "indicatorId": "B2", "delta": 1.75 },
+    { "measureId": "M12", "districtId": "yesil", "indicatorId": "C2", "delta": 4.38 },
+    { "measureId": "M12", "districtId": "almaty", "indicatorId": "C2", "delta": 4.38 },
+    { "measureId": "M12", "districtId": "saryarka", "indicatorId": "C2", "delta": 4.38 },
+    { "measureId": "M12", "districtId": "baikonur", "indicatorId": "C2", "delta": 4.38 },
+    { "measureId": "M12", "districtId": "nura", "indicatorId": "C2", "delta": 4.38 }
+  ],
   "explanation": {
     "summary": "Итоговый Score 56,54 против базового 52,56 (+3,98). Потрачено 95 из 100. ...",
     "strengths": [
@@ -127,7 +140,15 @@ Scoring (C#, `Features/Simulation/ScoreCalculator.cs`), per `docs/reference/dist
 - `criticalCount` = number of district × indicator values strictly below 40;
 - `score = 0.7 × averageScore + 0.3 × minDistrictScore − 1.0 × criticalCount`.
 
+### Applied effects
+
+`appliedEffects` is an additive response field: one `{measureId, districtId, indicatorId, delta}` for every affected district/indicator of a chosen measure. `delta` is the lag-adjusted contribution, **before synergies and the final 0–100 clamp**, rounded only for display. City measures have entries for all five districts. Negative effects remain negative. Do not sum these display-rounded entries to reconstruct the final result: the authoritative values are `districts[].indicatorsAfter`. For example, M12 adds exactly 4.375 internally, displayed as 4.38, and M10's B1 effect 10.5 excludes its separate synergy bonus 2.
+
+Older deployments omit this field; the frontend adapter retains `null` for absence and distinguishes it from an explicitly empty array. Existing request fields and response fields are unchanged.
+
 ### AI explanation
+
+Malformed upstream JSON types (including status/output/content/text) cause a mock fallback, not HTTP 500. Invalid optional usage counters are ignored. Regression checks use an in-memory HTTP double; no real key or model is needed.
 
 Environment variables (read by the API at startup; none is required to build or run):
 
