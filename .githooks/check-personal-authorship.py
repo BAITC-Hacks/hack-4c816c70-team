@@ -66,7 +66,11 @@ def check_push():
         if zero_object(remote_old):
             commits = git("rev-list", local_new, "--not", "--remotes").splitlines()
         else:
-            commits = git("rev-list", remote_old + ".." + local_new).splitlines()
+            known_remote = subprocess.run(
+                ["git", "cat-file", "-e", remote_old + "^{commit}"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            ).returncode == 0
+            commits = git("rev-list", remote_old + ".." + local_new).splitlines() if known_remote else git("rev-list", local_new, "--not", "--remotes").splitlines()
         for commit in commits:
             if commit not in visited:
                 check_commit(commit)
