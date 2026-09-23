@@ -4,6 +4,8 @@ export { Badge } from "./Badge";
 export type { BadgeProps, BadgeTone } from "./Badge";
 export { Button } from "./Button";
 export type { ButtonProps, ButtonSize, ButtonVariant } from "./Button";
+export { LanguageSwitcher } from "./LanguageSwitcher";
+export type { LanguageSwitcherProps } from "./LanguageSwitcher";
 export { Metric } from "./Metric";
 export type { MetricProps, MetricSize, MetricTone } from "./Metric";
 export { Panel } from "./Panel";

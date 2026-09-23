@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLocale } from "@/lib/i18n";
 import styles from "./AppHeader.module.css";
+import { uiMessages } from "./messages";
 import { cx } from "./cx";
 
 export interface AppHeaderStep {
@@ -36,6 +38,7 @@ interface IndicatorBox {
 /** Липкая шапка: мягко меняет фон при прокрутке, индикатор активного пункта скользит. */
 export function AppHeader({ title, steps, activeStepId, onStepSelect, end, titleHref }: AppHeaderProps) {
   const reasonPrefix = useId();
+  const copy = uiMessages[useLocale().locale];
   const listRef = useRef<HTMLOListElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [indicator, setIndicator] = useState<IndicatorBox | null>(null);
@@ -80,15 +83,15 @@ export function AppHeader({ title, steps, activeStepId, onStepSelect, end, title
         {titleHref ? (
           <Link href={titleHref} className={styles.title}>
             <span className={styles.mark} aria-hidden="true" />
-            {title}
+            <span className={styles.titleText}>{title}</span>
           </Link>
         ) : (
           <p className={styles.title}>
             <span className={styles.mark} aria-hidden="true" />
-            {title}
+            <span className={styles.titleText}>{title}</span>
           </p>
         )}
-        <nav aria-label="Разделы" className={styles.nav}>
+        <nav aria-label={copy.navLabel} className={styles.nav}>
           <ol ref={listRef} className={styles.steps} role="list">
             {steps.map((step, index) => {
               const isActive = step.id === activeStepId;

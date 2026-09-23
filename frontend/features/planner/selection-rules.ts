@@ -205,16 +205,38 @@ export const validateDraft: ValidateDraft = (scenario, choices) => {
 
 /* ---------- Доступность действий в форме ---------- */
 
+/**
+ * Причины без текста: только код и исходные данные. Перевод собирает словарь
+ * planner (messages.ts) по locale, поэтому правила не зависят от языка.
+ */
+export type AddBlockReason =
+  | { readonly kind: "rules-unavailable" }
+  | { readonly kind: "unknown-measure"; readonly measureId: MeasureId }
+  | { readonly kind: "plan-full"; readonly count: number; readonly required: number }
+  | { readonly kind: "category-limit"; readonly category: CategoryId; readonly measureIds: readonly MeasureId[] }
+  | { readonly kind: "incompatible"; readonly partner: MeasureId; readonly pair: readonly [MeasureId, MeasureId]; readonly reason: string }
+  | { readonly kind: "budget"; readonly shortfall: number }
+  | { readonly kind: "district-conflict"; readonly districtId: DistrictId; readonly conflict: DistrictConflict }
+  | { readonly kind: "unknown-district"; readonly districtId: DistrictId }
+  | { readonly kind: "all-districts-conflict" };
+
 export type MeasureAvailability =
   | { readonly status: "selected" }
   | { readonly status: "available" }
-  | { readonly status: "blocked"; readonly reasons: readonly string[] };
+  | { readonly status: "blocked"; readonly reasons: readonly AddBlockReason[] };
+
+/** Конфликт «в одном районе»: уже выбранная мера-партнёр и исходная причина правила из API. */
+export interface DistrictConflict {
+  readonly partner: MeasureId;
+  readonly pair: readonly [MeasureId, MeasureId];
+  readonly reason: string;
+}
 
 export interface DistrictOption {
   readonly id: DistrictId;
   readonly name: string;
   /** Конфликты «в одном районе» с уже выбранными мерами. Пусто — назначение допустимо. */
-  readonly conflicts: readonly string[];
+  readonly conflicts: readonly DistrictConflict[];
 }
 
 /** Конфликты назначения measureId в districtId с остальными выбранными мерами. */
@@ -223,10 +245,10 @@ export function getDistrictConflicts(
   choices: readonly ChoiceDraft[],
   measureId: MeasureId,
   districtId: DistrictId,
-): string[] {
+): DistrictConflict[] {
   const rules = scenario.rules;
   if (rules === null) return [];
-  const conflicts: string[] = [];
+  const conflicts: DistrictConflict[] = [];
   for (const rule of rules.incompatibilities) {
     if (rule.scope !== "same-district") continue;
     const [first, second] = rule.measureIds;
@@ -235,7 +257,7 @@ export function getDistrictConflicts(
     const clash = choices.some(
       (choice) => choice.measureId === partner && choice.districtId === districtId,
     );
-    if (clash) conflicts.push(`уже выбрана ${partner}. ${rule.reason}`);
+    if (clash) conflicts.push({ partner, pair: rule.measureIds, reason: rule.reason });
   }
   return conflicts;
 }
@@ -269,28 +291,24 @@ export function getAddAvailability(
 
   const rules = scenario.rules;
   if (rules === null) {
-    return { status: "blocked", reasons: ["Правила выбора ещё не получены от сервера."] };
+    return { status: "blocked", reasons: [{ kind: "rules-unavailable" }] };
   }
 
   const measures = indexMeasures(scenario);
   const measure = measures.get(measureId);
   if (!measure) {
-    return { status: "blocked", reasons: [`Меры «${measureId}» нет в каталоге.`] };
+    return { status: "blocked", reasons: [{ kind: "unknown-measure", measureId }] };
   }
 
-  const reasons: string[] = [];
+  const reasons: AddBlockReason[] = [];
 
   if (choices.length >= rules.requiredChoices) {
-    reasons.push(
-      `План заполнен: ${choices.length} из ${rules.requiredChoices}. Уберите меру, чтобы добавить эту.`,
-    );
+    reasons.push({ kind: "plan-full", count: choices.length, required: rules.requiredChoices });
   }
 
   const sameCategory = measuresByCategory(choices, measures).get(measure.category) ?? [];
   if (sameCategory.length >= rules.maxPerCategory) {
-    reasons.push(
-      `По направлению «${CATEGORY_LABELS[measure.category]}» уже выбрано ${sameCategory.length} меры (${sameCategory.join(", ")}).`,
-    );
+    reasons.push({ kind: "category-limit", category: measure.category, measureIds: sameCategory });
   }
 
   for (const rule of rules.incompatibilities) {
@@ -298,24 +316,21 @@ export function getAddAvailability(
     const [first, second] = rule.measureIds;
     const partner = first === measureId ? second : second === measureId ? first : null;
     if (partner !== null && choices.some((choice) => choice.measureId === partner)) {
-      reasons.push(`Нельзя вместе с ${partner}: ${rule.reason}`);
+      reasons.push({ kind: "incompatible", partner, pair: rule.measureIds, reason: rule.reason });
     }
   }
 
   const spent = sumCosts(choices, measures);
   if (spent + measure.cost > scenario.budget) {
-    reasons.push(
-      `Недостаточно бюджета: не хватает ${formatUnits(spent + measure.cost - scenario.budget)} ед.`,
-    );
+    reasons.push({ kind: "budget", shortfall: spent + measure.cost - scenario.budget });
   }
 
   if (measure.scope === "district" && districtId !== "") {
-    const district = scenario.districts.find((candidate) => candidate.id === districtId);
-    if (!district) {
-      reasons.push(`Неизвестный район «${districtId}»: выберите район из списка.`);
+    if (!scenario.districts.some((candidate) => candidate.id === districtId)) {
+      reasons.push({ kind: "unknown-district", districtId });
     } else {
       for (const conflict of getDistrictConflicts(scenario, choices, measureId, districtId)) {
-        reasons.push(`В районе «${district.name}» ${conflict} Выберите другой район.`);
+        reasons.push({ kind: "district-conflict", districtId, conflict });
       }
     }
   }
@@ -327,7 +342,7 @@ export function getAddAvailability(
       (district) => getDistrictConflicts(scenario, choices, measureId, district.id).length > 0,
     )
   ) {
-    reasons.push("Во всех районах есть конфликт с уже выбранными мерами.");
+    reasons.push({ kind: "all-districts-conflict" });
   }
 
   return reasons.length === 0 ? { status: "available" } : { status: "blocked", reasons };

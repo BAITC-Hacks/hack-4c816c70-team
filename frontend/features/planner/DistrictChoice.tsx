@@ -1,9 +1,11 @@
 import { useId, type ReactNode } from "react";
 import type { DistrictId } from "@/lib/contracts/ui";
+import { describeConflict, type PlannerText } from "./localize";
 import type { DistrictOption } from "./selection-rules";
 import styles from "./planner.module.css";
 
 interface DistrictChoiceProps {
+  readonly t: PlannerText;
   readonly legend: string;
   readonly options: readonly DistrictOption[];
   readonly value: DistrictId | "";
@@ -16,7 +18,7 @@ interface DistrictChoiceProps {
  * Выбор района в карточке: все районы видны сразу, как радиокнопки.
  * Район с конфликтом «в одном районе» недоступен, причина написана текстом.
  */
-export function DistrictChoice({ legend, options, value, onChange, children }: DistrictChoiceProps) {
+export function DistrictChoice({ t, legend, options, value, onChange, children }: DistrictChoiceProps) {
   const name = useId();
   const current = options.find((option) => option.id === value);
   const blocked = options.filter((option) => option.conflicts.length > 0 && option.id !== value);
@@ -40,7 +42,7 @@ export function DistrictChoice({ legend, options, value, onChange, children }: D
               />
               <span className={styles.pillText}>
                 {hasConflict ? <span aria-hidden="true">✕ </span> : null}
-                {option.name}
+                {t.district(option.id)}
               </span>
             </label>
           );
@@ -49,12 +51,18 @@ export function DistrictChoice({ legend, options, value, onChange, children }: D
       {current && current.conflicts.length > 0 ? (
         <p className={styles.textDanger}>
           <span aria-hidden="true">✕ </span>
-          В районе {current.name} конфликт: {current.conflicts.join(" ")}
+          {t.copy.conflictInDistrict(
+            t.district(current.id),
+            current.conflicts.map((conflict) => describeConflict(conflict, t)).join(" "),
+          )}
         </p>
       ) : null}
       {blocked.map((option) => (
         <p key={option.id} className={styles.textMuted}>
-          В районе {option.name} нельзя: {option.conflicts.join(" ")}
+          {t.copy.blockedInDistrict(
+            t.district(option.id),
+            option.conflicts.map((conflict) => describeConflict(conflict, t)).join(" "),
+          )}
         </p>
       ))}
       {children}

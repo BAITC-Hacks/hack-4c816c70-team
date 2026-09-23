@@ -5,17 +5,20 @@ import type {
   DraftValidation,
   MeasureId,
   MeasureVM,
+  ScenarioVM,
   SelectionIssue,
 } from "@/lib/contracts/ui";
 import { Button } from "@/components/ui";
 import { BudgetRibbon, type RibbonSegment } from "./BudgetRibbon";
 import { DistrictPicker } from "./DistrictPicker";
-import { formatUnits } from "./labels";
+import { describeIssue, type PlannerText } from "./localize";
 import type { DistrictOption } from "./selection-rules";
 import styles from "./planner.module.css";
 
 interface DecisionTrayProps {
   readonly id: string;
+  readonly t: PlannerText;
+  readonly scenario: ScenarioVM;
   readonly budget: number;
   readonly requiredChoices: number | null;
   readonly choices: readonly ChoiceDraft[];
@@ -41,6 +44,8 @@ function isProgressIssue(issue: SelectionIssue): boolean {
 
 export function DecisionTray({
   id,
+  t,
+  scenario,
   budget,
   requiredChoices,
   choices,
@@ -58,49 +63,51 @@ export function DecisionTray({
   onEvaluate,
   onClose,
 }: DecisionTrayProps) {
+  const copy = t.copy;
   const emptySlots = Math.max(0, (requiredChoices ?? 0) - choices.length);
   const isOverBudget = validation.provisionalRemaining < 0;
   const blockingIssues = validation.issues.filter((issue) => !isProgressIssue(issue));
   const progressIssue = validation.issues.find(isProgressIssue);
+  const describe = (issue: SelectionIssue) => describeIssue(issue, scenario, choices, validation, t);
 
   return (
     <aside id={id} className={styles.tray} aria-labelledby={`${id}-heading`}>
       <div className={styles.trayHeader}>
         <h2 id={`${id}-heading`} ref={headingRef} tabIndex={-1} className={styles.trayTitle}>
-          План
+          {copy.plan}
         </h2>
         <p className={styles.counter}>
-          <strong>{choices.length}</strong> из {requiredChoices ?? "—"}
+          <strong>{choices.length}</strong> {copy.ofTotal(requiredChoices)}
         </p>
         <Button variant="secondary" className={styles.trayClose} onClick={onClose}>
-          Свернуть
+          {copy.collapse}
         </Button>
       </div>
 
-      <section className={styles.budget} aria-label="Предварительный бюджет">
-        <BudgetRibbon budget={budget} segments={segments} />
+      <section className={styles.budget} aria-label={copy.budgetLabel}>
+        <BudgetRibbon t={t} budget={budget} segments={segments} />
         <dl className={styles.budgetFigures}>
           <div>
-            <dt>Потрачено</dt>
+            <dt>{copy.spent}</dt>
             <dd>
               <span key={validation.provisionalSpent} className={styles.flash}>
-                {formatUnits(validation.provisionalSpent)}
+                {t.units(validation.provisionalSpent)}
               </span>{" "}
-              из {formatUnits(budget)}
+              {copy.ofBudget(t.units(budget))}
             </dd>
           </div>
           <div data-over={isOverBudget}>
-            <dt>{isOverBudget ? "Превышение" : "Остаток"}</dt>
+            <dt>{isOverBudget ? copy.overBudget : copy.remaining}</dt>
             <dd>
               {isOverBudget ? <span aria-hidden="true">✕ </span> : null}
               <span key={validation.provisionalRemaining} className={styles.flash}>
-                {formatUnits(Math.abs(validation.provisionalRemaining))}
+                {t.units(Math.abs(validation.provisionalRemaining))}
               </span>{" "}
-              ед.
+              {copy.unit}
             </dd>
           </div>
         </dl>
-        <p className={styles.textMuted}>Предварительно, по ценам каталога. Итог считает сервер.</p>
+        <p className={styles.textMuted}>{copy.estimateNote}</p>
       </section>
 
       <ol className={styles.slots}>
@@ -113,12 +120,14 @@ export function DecisionTray({
             <li key={`${choice.measureId}-${index}`} className={styles.slot} data-state={hasIssue ? "issue" : "ok"}>
               <div className={styles.slotHead}>
                 <span className={styles.measureId}>{choice.measureId}</span>
-                <p className={styles.slotName}>{measure?.name ?? `Мера «${choice.measureId}» не найдена`}</p>
-                <span className={styles.slotCost}>{measure ? formatUnits(measure.cost) : "—"}</span>
+                <p className={styles.slotName}>
+                  {measure ? t.measure(measure.id) : copy.measureNotFound(choice.measureId)}
+                </p>
+                <span className={styles.slotCost}>{measure ? t.units(measure.cost) : "—"}</span>
                 <button
                   type="button"
                   className={styles.slotRemove}
-                  aria-label={`Убрать ${choice.measureId} из плана`}
+                  aria-label={copy.removeFromPlan(choice.measureId)}
                   onClick={() => onRemove(choice.measureId)}
                 >
                   <span aria-hidden="true">×</span>
@@ -126,7 +135,8 @@ export function DecisionTray({
               </div>
               {measure?.scope === "district" ? (
                 <DistrictPicker
-                  label="Район"
+                  t={t}
+                  label={copy.districtShort}
                   options={districtOptionsFor(measure.id)}
                   value={choice.districtId ?? ""}
                   onChange={(districtId) => onDistrictChange(measure, districtId)}
@@ -134,39 +144,34 @@ export function DecisionTray({
                   {choice.districtId ? null : (
                     <p className={styles.textWarning}>
                       <span aria-hidden="true">! </span>
-                      Район не выбран: оценка недоступна.
+                      {copy.noDistrictWarning}
                     </p>
                   )}
                 </DistrictPicker>
               ) : measure?.scope === "city" ? (
-                <p className={styles.slotScope}>Весь город</p>
+                <p className={styles.slotScope}>{copy.wholeCity}</p>
               ) : null}
             </li>
           );
         })}
         {Array.from({ length: emptySlots }, (_, offset) => (
           <li key={`empty-${offset}`} className={styles.slot} data-state="empty">
-            Свободное место
+            {copy.emptySlot}
           </li>
         ))}
       </ol>
 
-      {potentialSynergies.length > 0 ? (
-        <p className={styles.synergy}>
-          Возможная синергия: {potentialSynergies.map(([a, b]) => `${a} и ${b}`).join(", ")}. Сработает ли она,
-          покажет оценка.
-        </p>
-      ) : null}
+      {potentialSynergies.length > 0 ? <p className={styles.synergy}>{copy.traySynergy(potentialSynergies)}</p> : null}
 
       <div id={`${id}-summary`} ref={summaryRef} tabIndex={-1} className={styles.summary}>
         {blockingIssues.length > 0 ? (
           <>
-            <h3 className={styles.summaryTitle}>Что мешает оценке</h3>
+            <h3 className={styles.summaryTitle}>{copy.blockersTitle}</h3>
             <ul className={styles.reasons}>
               {blockingIssues.map((issue, index) => (
                 <li key={`${issue.code}-${index}`}>
                   <span aria-hidden="true">✕ </span>
-                  {issue.message}
+                  {describe(issue)}
                 </li>
               ))}
             </ul>
@@ -175,16 +180,17 @@ export function DecisionTray({
         {progressIssue ? (
           <p className={styles.textWarning}>
             <span aria-hidden="true">! </span>
-            {progressIssue.message}
+            {describe(progressIssue)}
           </p>
         ) : null}
       </div>
 
+      {/* Текст ошибки сервера переводит GPT по code; здесь только локализованная рамка. */}
       {serverError !== null ? (
         <div className={styles.serverError} role="alert">
-          <p className={styles.summaryTitle}>Ответ сервера</p>
+          <p className={styles.summaryTitle}>{copy.serverResponse}</p>
           <p>{serverError}</p>
-          <p className={styles.textMuted}>План сохранён. Проверьте его и оцените снова.</p>
+          <p className={styles.textMuted}>{copy.planSaved}</p>
         </div>
       ) : null}
 
@@ -197,7 +203,7 @@ export function DecisionTray({
         aria-describedby={`${id}-summary`}
         onClick={onEvaluate}
       >
-        {isEvaluating ? "Оцениваем решения…" : "Оценить решения"}
+        {isEvaluating ? copy.evaluating : copy.evaluate}
       </Button>
     </aside>
   );

@@ -234,6 +234,22 @@ button.step:hover {
 }
 
 @media (max-width: 420px) {
+  /* Узкий экран: название остаётся знаком-ссылкой, текст — для экранного чтеца;
+     так язык и тема помещаются в одну строку с ним */
+  .titleText {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .title {
+    min-width: var(--control-height);
+    justify-content: center;
+  }
+
   /* У неактивных пунктов остаётся номер; подпись доступна скринридеру */
   .step:not(.active) .stepLabel {
     position: absolute;

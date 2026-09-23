@@ -19,6 +19,8 @@ import {
   setChoiceDistrict,
   validateDraft,
 } from "./selection-rules";
+import { createPlannerText, describeBlock, describeIssue } from "./localize";
+import { plannerMessages } from "./messages";
 
 /*
  * ТЕСТОВЫЙ FIXTURE. Минимальный сценарий только для проверки правил формы:
@@ -279,7 +281,10 @@ describe("доступность действий в форме", () => {
   it("глобальный конфликт блокирует всю карточку M3", () => {
     const availability = getAddAvailability(TEST_SCENARIO, [{ measureId: "M1", districtId: "nura" }], "M3");
     assert.equal(availability.status, "blocked");
-    assert.ok(availability.status === "blocked" && /Нельзя вместе с M1/.test(availability.reasons.join(" ")));
+    assert.ok(
+      availability.status === "blocked" &&
+        availability.reasons.some((r) => r.kind === "incompatible" && r.partner === "M1"),
+    );
   });
 
   it("районный конфликт блокирует только конкретный район", () => {
@@ -299,7 +304,9 @@ describe("доступность действий в форме", () => {
     assert.equal(conflicting.status, "blocked");
     assert.ok(
       conflicting.status === "blocked" &&
-        conflicting.reasons.some((r) => r.includes("«Нура»") && r.includes("M4")),
+        conflicting.reasons.some(
+          (r) => r.kind === "district-conflict" && r.districtId === "nura" && r.conflict.partner === "M4",
+        ),
     );
 
     assert.equal(getAddAvailability(TEST_SCENARIO, choices, "M7", "yesil").status, "available");
@@ -309,7 +316,10 @@ describe("доступность действий в форме", () => {
 
   it("неизвестный район для добавления блокирует кнопку", () => {
     const availability = getAddAvailability(TEST_SCENARIO, [], "M7", "atlantis");
-    assert.ok(availability.status === "blocked" && availability.reasons.some((r) => r.includes("atlantis")));
+    assert.ok(
+      availability.status === "blocked" &&
+        availability.reasons.some((r) => r.kind === "unknown-district" && r.districtId === "atlantis"),
+    );
   });
 
   it("район-кандидат городской меры игнорируется", () => {
@@ -319,14 +329,20 @@ describe("доступность действий в форме", () => {
   it("третья мера направления, бюджет и заполненные слоты объясняют блокировку", () => {
     const social = [{ measureId: "M7", districtId: "nura" }, { measureId: "M8", districtId: "nura" }];
     const byCategory = getAddAvailability(TEST_SCENARIO, social, "M9");
-    assert.ok(byCategory.status === "blocked" && byCategory.reasons.some((r) => r.includes("Социальная сфера")));
+    assert.ok(
+      byCategory.status === "blocked" &&
+        byCategory.reasons.some((r) => r.kind === "category-limit" && r.category === "social"),
+    );
 
     const pricey = withCosts({ M7: 60, M13: 45 });
     const budget = getAddAvailability(pricey, [{ measureId: "M7", districtId: "nura" }], "M13");
-    assert.ok(budget.status === "blocked" && budget.reasons.some((r) => r.includes("не хватает 5 ед.")));
+    assert.ok(budget.status === "blocked" && budget.reasons.some((r) => r.kind === "budget" && r.shortfall === 5));
 
     const full = getAddAvailability(TEST_SCENARIO, VALID, "M1");
-    assert.ok(full.status === "blocked" && full.reasons.some((r) => r.includes("5 из 5")));
+    assert.ok(
+      full.status === "blocked" &&
+        full.reasons.some((r) => r.kind === "plan-full" && r.count === 5 && r.required === 5),
+    );
   });
 
   it("удаление меры сразу освобождает карточку и бюджет", () => {
@@ -345,5 +361,80 @@ describe("доступность действий в форме", () => {
   it("возможная синергия — только наличие пары", () => {
     assert.deepEqual(getPotentialSynergies(TEST_SCENARIO, VALID), [["M10", "M12"]]);
     assert.deepEqual(getPotentialSynergies({ ...TEST_SCENARIO, rules: null }, VALID), []);
+  });
+});
+
+describe("локализация Planner: ru / kk / en", () => {
+  const LOCALES = ["ru", "kk", "en"] as const;
+  const CYRILLIC = /[А-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]/;
+  // Реальные ID пар и районов — чтобы названия и причины пришли из каталога GPT.
+  const CONFLICT: readonly ChoiceDraft[] = [
+    { measureId: "M1", districtId: "nura" },
+    { measureId: "M3", districtId: "yesil" },
+    { measureId: "M4", districtId: "nura" },
+    { measureId: "M7", districtId: "nura" },
+    { measureId: "M12", districtId: "nura" },
+    { measureId: "M8" },
+  ];
+
+  it("в словарях одинаковые ключи во всех языках", () => {
+    const keys = (value: object): string[] =>
+      Object.entries(value).flatMap(([key, item]) =>
+        typeof item === "object" && item !== null ? keys(item).map((nested) => `${key}.${nested}`) : [key],
+      ).sort();
+    assert.deepEqual(keys(plannerMessages.kk), keys(plannerMessages.ru));
+    assert.deepEqual(keys(plannerMessages.en), keys(plannerMessages.ru));
+  });
+
+  it("причины validateDraft переводятся по code, английский текст без кириллицы", () => {
+    const validation = validateDraft(TEST_SCENARIO, CONFLICT);
+    const kinds = new Set(validation.issues.map((issue) => issue.code));
+    for (const code of ["choice-count", "district-for-city", "district-required", "incompatible"] as const) {
+      assert.ok(kinds.has(code), code);
+    }
+    for (const locale of LOCALES) {
+      const t = createPlannerText(locale, TEST_SCENARIO);
+      for (const issue of validation.issues) {
+        const text = describeIssue(issue, TEST_SCENARIO, CONFLICT, validation, t);
+        assert.ok(text.length > 0);
+        if (locale === "en") assert.doesNotMatch(text, CYRILLIC, text);
+      }
+    }
+    const en = createPlannerText("en", TEST_SCENARIO);
+    const district = validation.issues.find((issue) => issue.code === "incompatible" && issue.districtId === "nura")!;
+    assert.match(describeIssue(district, TEST_SCENARIO, CONFLICT, validation, en), /Nura/);
+  });
+
+  it("причины блокировки переводятся из данных, числа по intlLocale", () => {
+    const pricey = withCosts({ M7: 60, M13: 45.5 });
+    const blocked = getAddAvailability(pricey, [{ measureId: "M7", districtId: "nura" }], "M13");
+    assert.equal(blocked.status, "blocked");
+    const reasons = blocked.status === "blocked" ? blocked.reasons : [];
+    assert.match(describeBlock(reasons[0], createPlannerText("ru", pricey)), /5,5 ед\./);
+    assert.match(describeBlock(reasons[0], createPlannerText("en", pricey)), /5\.5 units/);
+    assert.match(describeBlock(reasons[0], createPlannerText("kk", pricey)), /5,5 бірлік/);
+
+    const conflict = getAddAvailability(TEST_SCENARIO, [{ measureId: "M4", districtId: "nura" }], "M7", "nura");
+    const kk = createPlannerText("kk", TEST_SCENARIO);
+    const text = conflict.status === "blocked" ? describeBlock(conflict.reasons[0], kk) : "";
+    assert.match(text, /Нұра/);
+    assert.doesNotMatch(text, /уже выбрана/);
+  });
+
+  it("смена языка не меняет доступность, расходы и выбор", () => {
+    const base = validateDraft(TEST_SCENARIO, VALID);
+    for (const locale of LOCALES) {
+      createPlannerText(locale, TEST_SCENARIO);
+      assert.deepEqual(validateDraft(TEST_SCENARIO, VALID), base);
+      assert.equal(getAddAvailability(TEST_SCENARIO, VALID, "M1").status, "blocked");
+    }
+  });
+
+  it("неизвестный ID сохраняет название из API", () => {
+    const scenario: ScenarioVM = { ...TEST_SCENARIO, measures: [...TEST_SCENARIO.measures, measure("M99", "safety", "city")] };
+    assert.equal(createPlannerText("en", scenario).measure("M99"), "Тестовая мера M99");
+    const english = createPlannerText("en", scenario).measure("M7");
+    assert.notEqual(english, "Тестовая мера M7");
+    assert.doesNotMatch(english, CYRILLIC);
   });
 });

@@ -1,5 +1,5 @@
 import type { MeasureId } from "@/lib/contracts/ui";
-import { formatUnits } from "./labels";
+import type { PlannerText } from "./localize";
 import styles from "./planner.module.css";
 
 export interface RibbonSegment {
@@ -8,6 +8,7 @@ export interface RibbonSegment {
 }
 
 interface BudgetRibbonProps {
+  readonly t: PlannerText;
   readonly budget: number;
   readonly segments: readonly RibbonSegment[];
   /** Размер ленты задаёт вызывающий: полная в панели, тонкая в мобильной панели. */
@@ -18,15 +19,15 @@ interface BudgetRibbonProps {
  * Бюджет как лента: каждая выбранная мера занимает долю, пропорциональную цене
  * из каталога. Это арифметика формы, не прогноз. Итоговые расходы — от сервера.
  */
-export function BudgetRibbon({ budget, segments, className }: BudgetRibbonProps) {
+export function BudgetRibbon({ t, budget, segments, className }: BudgetRibbonProps) {
   const spent = segments.reduce((sum, segment) => sum + segment.cost, 0);
   const scale = Math.max(budget, spent);
   const rest = Math.max(0, budget - spent);
   const limitAt = scale > 0 ? (budget / scale) * 100 : 100;
   const label =
     spent > budget
-      ? `Бюджет превышен: ${formatUnits(spent)} из ${formatUnits(budget)} ед.`
-      : `Распределено ${formatUnits(spent)} из ${formatUnits(budget)} ед.`;
+      ? t.copy.ribbonOver(t.units(spent), t.units(budget))
+      : t.copy.ribbonAllocated(t.units(spent), t.units(budget));
 
   return (
     <div

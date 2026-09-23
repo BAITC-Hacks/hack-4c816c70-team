@@ -11,7 +11,7 @@ import {
   assignSlots,
 } from "./atlas-layout";
 import type { DistrictSummary } from "./district-summary";
-import { formatAmount, formatShare, plural } from "./format";
+import { useCityCopy } from "./use-city-copy";
 import styles from "./city-overview.module.css";
 
 interface DistrictAtlasProps {
@@ -42,6 +42,7 @@ export function DistrictAtlas({
   onSelectDistrict,
 }: DistrictAtlasProps) {
   const plateRefs = useRef(new Map<DistrictId, SVGGElement>());
+  const { copy, amount, share, district: districtLabel } = useCityCopy();
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const gridId = `${uid}-grid`;
   const captionId = `${uid}-caption`;
@@ -71,7 +72,8 @@ export function DistrictAtlas({
     selectAndFocus(placed[target].district.id);
   };
 
-  const thresholdLabel = formatAmount(criticalThreshold);
+  const thresholdLabel = amount(criticalThreshold);
+  const indicatorCount = summaries[0]?.readings.length ?? 0;
   const thresholdY = (anchorY: number) =>
     anchorY + PROFILE.top + PROFILE.height - (clampScale(criticalThreshold) / 100) * PROFILE.height;
 
@@ -81,7 +83,7 @@ export function DistrictAtlas({
         className={styles.atlasSvg}
         viewBox={`0 0 ${ATLAS_VIEWBOX.width} ${ATLAS_VIEWBOX.height}`}
         role="radiogroup"
-        aria-label="Схема районов"
+        aria-label={copy.atlasLabel}
         aria-describedby={captionId}
       >
         <defs>
@@ -116,12 +118,9 @@ export function DistrictAtlas({
           if (!slot) return null;
           const isSelected = district.id === selectedDistrictId;
           const criticalCount = critical.length;
-          const shareLabel = `${formatShare(district.populationShare)} жителей`;
-          const criticalLabel =
-            criticalCount > 0
-              ? `${criticalCount} ${plural(criticalCount, ["показатель", "показателя", "показателей"])} ниже ${thresholdLabel}`
-              : `нет показателей ниже ${thresholdLabel}`;
-          const pillText = `▼ ${criticalCount} ниже ${thresholdLabel}`;
+          const name = districtLabel(district);
+          const shareValue = share(district.populationShare);
+          const pillText = copy.platePill(criticalCount, thresholdLabel);
           const { x, y } = slot.anchor;
 
           return (
@@ -133,7 +132,7 @@ export function DistrictAtlas({
               }}
               role="radio"
               aria-checked={isSelected}
-              aria-label={`${district.name}: ${shareLabel}, ${criticalLabel}`}
+              aria-label={copy.plateLabel(name, shareValue, criticalCount, thresholdLabel)}
               tabIndex={district.id === tabStopId ? 0 : -1}
               className={cx(styles.plate, isSelected && styles.plateSelected)}
               onClick={() => selectAndFocus(district.id)}
@@ -144,10 +143,10 @@ export function DistrictAtlas({
               <g clipPath={`url(#${clipId(slot.key)})`} aria-hidden="true">
                 <rect x={x} y={y - 13} width={11} height={11} rx={2} className={styles.plateNode} />
                 <text x={x + 18} y={y} className={styles.plateName}>
-                  {district.name}
+                  {name}
                 </text>
                 <text x={x} y={y + 26} className={styles.plateMeta}>
-                  {shareLabel}
+                  {copy.plateShare(shareValue)}
                 </text>
                 <g className={styles.plateProfile}>
                   {readings.map((reading, barIndex) => {
@@ -196,15 +195,10 @@ export function DistrictAtlas({
         })}
       </svg>
       <figcaption id={captionId} className={styles.atlasCaption}>
-        <span className={styles.atlasCaptionTitle}>Схема районов</span>
+        <span className={styles.atlasCaptionTitle}>{copy.atlasLabel}</span>
         <span>
-          Условная схема: в данных нет географических границ, форма и положение областей не
-          соответствуют карте. Столбики — десять исходных показателей района на шкале
-          0–100, пунктир — критический порог {thresholdLabel}; красным отмечены значения ниже
-          порога.
-          {hiddenCount > 0
-            ? ` Ещё ${hiddenCount} ${plural(hiddenCount, ["район", "района", "районов"])} — только в списке ниже.`
-            : null}
+          {copy.atlasCaption(indicatorCount, thresholdLabel)}
+          {hiddenCount > 0 ? ` ${copy.atlasHidden(hiddenCount)}` : null}
         </span>
       </figcaption>
     </figure>

@@ -3,14 +3,11 @@
 import { useId } from "react";
 import { useTheme } from "./ThemeProvider";
 import type { ThemePreference } from "./theme-store";
+import { useLocale } from "@/lib/i18n";
+import { uiMessages } from "./messages";
 import styles from "./ThemeSwitcher.module.css";
 
-const OPTIONS: ReadonlyArray<{ value: ThemePreference; label: string }> = [
-  { value: "system", label: "Системная" },
-  { value: "light", label: "День" },
-  { value: "dark", label: "Ночь" },
-  { value: "paper", label: "Бумага" },
-];
+const OPTIONS: readonly ThemePreference[] = ["system", "light", "dark", "paper"];
 
 function ThemeIcon({ value }: { value: ThemePreference }) {
   switch (value) {
@@ -52,26 +49,28 @@ export interface ThemeSwitcherProps {
 export function ThemeSwitcher({ className }: ThemeSwitcherProps) {
   const { preference, setPreference } = useTheme();
   const name = useId();
+  const copy = uiMessages[useLocale().locale];
 
   return (
     <fieldset className={className ? `${styles.switcher} ${className}` : styles.switcher}>
-      <legend className="visually-hidden">Тема оформления</legend>
-      {OPTIONS.map((option) => {
-        const id = `${name}-${option.value}`;
+      <legend className="visually-hidden">{copy.themeLegend}</legend>
+      {OPTIONS.map((value) => {
+        const id = `${name}-${value}`;
+        const label = copy.themes[value];
         return (
-          <span key={option.value} className={styles.option}>
+          <span key={value} className={styles.option}>
             <input
               id={id}
               className={styles.input}
               type="radio"
               name={name}
-              value={option.value}
-              checked={preference === option.value}
-              onChange={() => setPreference(option.value)}
+              value={value}
+              checked={preference === value}
+              onChange={() => setPreference(value)}
             />
-            <label htmlFor={id} className={styles.label} title={option.label}>
-              <ThemeIcon value={option.value} />
-              <span className="visually-hidden">{option.label}</span>
+            <label htmlFor={id} className={styles.label} title={label}>
+              <ThemeIcon value={value} />
+              <span className="visually-hidden">{label}</span>
             </label>
           </span>
         );

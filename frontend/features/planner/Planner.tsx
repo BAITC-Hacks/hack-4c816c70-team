@@ -6,15 +6,16 @@ import type {
   CategoryId,
   ChoiceDraft,
   DistrictId,
-  IndicatorId,
   MeasureId,
   MeasureVM,
   PlannerProps,
 } from "@/lib/contracts/ui";
 import { Button } from "@/components/ui";
+import { useLocale } from "@/lib/i18n";
 import { BudgetRibbon, type RibbonSegment } from "./BudgetRibbon";
 import { DecisionTray } from "./DecisionTray";
-import { CATEGORY_LABELS, CATEGORY_ORDER, formatUnits } from "./labels";
+import { CATEGORY_ORDER } from "./labels";
+import { createPlannerText } from "./localize";
 import { MeasureCard } from "./MeasureCard";
 import {
   addChoice,
@@ -63,6 +64,10 @@ export function Planner({
   onBack,
 }: PlannerProps) {
   const trayId = useId();
+  const { locale } = useLocale();
+  // Смена языка меняет только тексты: choices, доступность и расходы от неё не зависят.
+  const t = useMemo(() => createPlannerText(locale, scenario), [locale, scenario]);
+  const copy = t.copy;
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [pendingDistricts, setPendingDistricts] = useState<Readonly<Record<MeasureId, DistrictId | "">>>({});
   const [isTrayOpen, setTrayOpen] = useState(false);
@@ -99,10 +104,6 @@ export function Planner({
   const preferredDistrict = scenario.districts.find((district) => district.id === preferredDistrictId);
 
   const measureById = useMemo(() => indexMeasures(scenario), [scenario]);
-  const indicatorNames = useMemo(
-    () => new Map<IndicatorId, string>(scenario.indicators.map((indicator) => [indicator.id, indicator.name])),
-    [scenario.indicators],
-  );
   const validation = useMemo(() => validateDraft(scenario, choices), [scenario, choices]);
   const potentialSynergies = useMemo(() => getPotentialSynergies(scenario, choices), [scenario, choices]);
   const segments = useMemo<RibbonSegment[]>(
@@ -132,9 +133,7 @@ export function Planner({
 
   const preferredId = preferredDistrict?.id;
   // Всё, что карточке нужно для отрисовки, считается один раз на изменение набора.
-  const cards = useMemo(
-    () =>
-      scenario.measures.map((measure) => {
+  const cards = scenario.measures.map((measure) => {
         const pendingDistrictId = resolvePendingDistrict(scenario, choices, pendingDistricts, preferredId, measure);
         const availability = getAddAvailability(scenario, choices, measure.id, pendingDistrictId);
         const blockedBeyondDistrict =
@@ -148,9 +147,7 @@ export function Planner({
           showDistrictChoice: !blockedBeyondDistrict,
           districtOptions: getDistrictOptions(scenario, choices, measure.id),
         };
-      }),
-    [scenario, choices, pendingDistricts, preferredId],
-  );
+      });
   const visibleCards = filter === "all" ? cards : cards.filter((card) => card.measure.category === filter);
 
   function commit(next: readonly ChoiceDraft[]) {
@@ -205,44 +202,43 @@ export function Planner({
       <header className={styles.plannerHeader}>
         <div className={styles.intro}>
           <h1 id={`${trayId}-title`} className={styles.plannerTitle}>
-            {requiredChoices !== null ? `Выберите ${requiredChoices} решений` : "Каталог решений"}
+            {requiredChoices !== null ? copy.title(requiredChoices) : copy.titleWithoutRules}
           </h1>
           <p className={styles.lede}>
-            Бюджет {formatUnits(scenario.budget)} ед. на {formatUnits(scenario.horizonQuarters)} кварталов.
-            {rules ? ` Не больше ${rules.maxPerCategory} мер одного направления.` : null}
+            {copy.lede(t.units(scenario.budget), t.units(scenario.horizonQuarters))}
+            {rules ? ` ${copy.ledeLimit(rules.maxPerCategory)}` : null}
           </p>
         </div>
         <Button variant="ghost" onClick={onBack} disabled={isEvaluating}>
-          К обзору города
+          {copy.back}
         </Button>
       </header>
 
       {rules === null ? (
         <p className={styles.rulesMissing} role="status">
           <span aria-hidden="true">! </span>
-          Правила выбора ещё не получены от сервера. Каталог можно просмотреть, но добавить меры и оценить план
-          нельзя.
+          {copy.rulesMissing}
         </p>
       ) : null}
 
       <p className={styles.srOnly} aria-live="polite">
         {isEvaluating
-          ? "Оцениваем решения, изменения временно заблокированы."
-          : `Выбрано ${choices.length} из ${requiredChoices ?? "—"}. Предварительный остаток ${formatUnits(validation.provisionalRemaining)} ед.`}
+          ? copy.liveEvaluating
+          : copy.liveStatus(choices.length, requiredChoices, t.units(validation.provisionalRemaining))}
       </p>
 
       <fieldset className={styles.lock} disabled={isEvaluating}>
-        <legend className={styles.srOnly}>Конструктор решений</legend>
+        <legend className={styles.srOnly}>{copy.builderLegend}</legend>
         <div className={styles.layout}>
           <div className={styles.catalog}>
-            <div className={styles.filters} role="group" aria-label="Направления">
+            <div className={styles.filters} role="group" aria-label={copy.filtersLabel}>
               <button
                 type="button"
                 className={styles.chip}
                 aria-pressed={filter === "all"}
                 onClick={() => setFilter("all")}
               >
-                Все
+                {copy.filterAll}
               </button>
               {CATEGORY_ORDER.map((category) => (
                 <button
@@ -252,7 +248,7 @@ export function Planner({
                   aria-pressed={filter === category}
                   onClick={() => setFilter(category)}
                 >
-                  {CATEGORY_LABELS[category]}
+                  {t.category(category)}
                   {rules ? (
                     <span className={styles.chipCount}>
                       {selectedPerCategory.get(category) ?? 0}/{rules.maxPerCategory}
@@ -264,7 +260,7 @@ export function Planner({
 
             {preferredDistrict ? (
               <p className={styles.textMuted}>
-                Район {preferredDistrict.name} из обзора предложен для новых мер. Его можно сменить в карточке.
+                {copy.preferredDistrict(t.district(preferredDistrict.id))}
               </p>
             ) : null}
 
@@ -275,7 +271,7 @@ export function Planner({
                     <MeasureCard
                       measure={card.measure}
                       budget={scenario.budget}
-                      indicatorNames={indicatorNames}
+                      t={t}
                       choice={card.choice}
                       availability={card.availability}
                       showDistrictChoice={card.showDistrictChoice}
@@ -293,7 +289,7 @@ export function Planner({
                 ))}
               </ul>
             ) : (
-              <p className={styles.empty}>В этом направлении в каталоге нет мер. Выберите другое направление.</p>
+              <p className={styles.empty}>{copy.emptyCategory}</p>
             )}
           </div>
 
@@ -301,6 +297,8 @@ export function Planner({
             <div className={styles.scrim} aria-hidden="true" onClick={closeTray} />
             <DecisionTray
               id={trayId}
+              t={t}
+              scenario={scenario}
               budget={scenario.budget}
               requiredChoices={requiredChoices}
               choices={choices}
@@ -332,20 +330,20 @@ export function Planner({
           >
             <span className={styles.mobileLine}>
               <strong>
-                {choices.length} из {requiredChoices ?? "—"}
+                {choices.length} {copy.ofTotal(requiredChoices)}
               </strong>
               <span data-over={isOverBudget}>
                 {isOverBudget
-                  ? `✕ превышение ${formatUnits(-validation.provisionalRemaining)} ед.`
-                  : `остаток ${formatUnits(validation.provisionalRemaining)} ед.`}
+                  ? `✕ ${copy.mobileOver(t.units(-validation.provisionalRemaining))}`
+                  : copy.mobileRemaining(t.units(validation.provisionalRemaining))}
               </span>
               {/* Подпись постоянная: смена на «Свернуть» переносила строку и увеличивала панель. */}
               <span className={styles.mobileToggle}>
-                План
+                {copy.plan}
                 <span className={styles.chevron} aria-hidden="true" />
               </span>
             </span>
-            <BudgetRibbon budget={scenario.budget} segments={segments} className={styles.ribbonThin} />
+            <BudgetRibbon t={t} budget={scenario.budget} segments={segments} className={styles.ribbonThin} />
           </button>
           <Button
             className={styles.evaluateCompact}
@@ -354,7 +352,7 @@ export function Planner({
             aria-describedby={`${trayId}-summary`}
             onClick={handleEvaluate}
           >
-            {isEvaluating ? "Оцениваем…" : "Оценить"}
+            {isEvaluating ? copy.evaluatingShort : copy.evaluateShort}
           </Button>
         </div>
       </fieldset>

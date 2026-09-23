@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider, themeBootstrapScript } from "@/components/ui";
 import { AppShell } from "@/features/simulator/AppShell";
+import { LocaleProvider } from "@/lib/i18n";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +16,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ru" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} /></head>
-      <body><ThemeProvider><AppShell>{children}</AppShell></ThemeProvider></body>
+      <body><LocaleProvider><ThemeProvider><AppShell>{children}</AppShell></ThemeProvider></LocaleProvider></body>
     </html>
   );
 }

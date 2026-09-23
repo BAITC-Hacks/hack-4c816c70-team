@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { DistrictId } from "@/lib/contracts/ui";
 import { cx } from "@/components/ui";
 import { AtlasSketch } from "./AtlasSketch";
+import { useCityCopy } from "./use-city-copy";
 import type { CitySceneHandle } from "./city-scene-engine";
 import styles from "./city-scene.module.css";
 
@@ -49,6 +50,7 @@ export function CityScene({ districtIds, selectedDistrictId, onSelectDistrict }:
   const onSelectRef = useRef(onSelectDistrict);
   const selectedRef = useRef(selectedDistrictId);
   const [status, setStatus] = useState<SceneStatus>("loading");
+  const { copy } = useCityCopy();
   const enabled = useSyncExternalStore(noopSubscribe, canRender3D, serverCapability);
   const idsKey = districtIds.join("|");
 
@@ -115,7 +117,7 @@ export function CityScene({ districtIds, selectedDistrictId, onSelectDistrict }:
       </div>
       {/* Подпись постоянная: смена текста при загрузке сцены сдвигала блок ниже */}
       <figcaption className={styles.caption}>
-        Схематичная визуализация города: расположение и высота зданий условные.
+        {copy.sceneCaption}
       </figcaption>
     </figure>
   );

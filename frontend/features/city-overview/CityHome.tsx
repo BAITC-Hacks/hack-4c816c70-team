@@ -6,7 +6,7 @@ import type { DistrictId, ScenarioVM } from "@/lib/contracts/ui";
 import { Badge, Button, Reveal, Skeleton } from "@/components/ui";
 import { CityScene } from "./CityScene";
 import { DistrictExplorer } from "./DistrictExplorer";
-import { formatAmount, formatScore, plural } from "./format";
+import { useCityCopy } from "./use-city-copy";
 import styles from "./home.module.css";
 
 export type ScenarioLoadStatus = "loading" | "ready" | "error";
@@ -43,25 +43,17 @@ export function CityHome({
   const finalId = `${uid}-final`;
   const ready = scenarioStatus === "ready" && scenario !== null;
   const rules = scenario?.rules ?? null;
-  const selectedName = scenario?.districts.find((district) => district.id === selectedDistrictId)?.name;
+  const { copy, amount, score, district: districtLabel } = useCityCopy();
+  const selectedDistrict = scenario?.districts.find((district) => district.id === selectedDistrictId);
+  const selectedName = selectedDistrict ? districtLabel(selectedDistrict) : null;
 
   const steps = [
+    { title: copy.step1Title, text: copy.step1Text(scenario ? amount(scenario.criticalThreshold) : null) },
     {
-      title: "Изучите районы",
-      text: scenario
-        ? `Посмотрите исходные показатели и найдите значения ниже критического порога ${formatAmount(scenario.criticalThreshold)}.`
-        : "Посмотрите исходные показатели и найдите значения ниже критического порога.",
+      title: copy.step2Title,
+      text: copy.step2Text(rules?.requiredChoices ?? null, rules?.maxPerCategory ?? null),
     },
-    {
-      title: "Соберите план",
-      text: rules
-        ? `Ровно ${rules.requiredChoices} ${plural(rules.requiredChoices, ["мера", "меры", "мер"])} в пределах бюджета, не больше ${rules.maxPerCategory} по одному направлению. Конфликтующие пары видны сразу.`
-        : "Выберите меры в пределах бюджета и назначьте районы. Конфликтующие пары видны сразу.",
-    },
-    {
-      title: "Получите оценку",
-      text: "Сервер проверит набор, рассчитает Score и изменения по районам и объяснит результат.",
-    },
+    { title: copy.step3Title, text: copy.step3Text },
   ];
 
   return (
@@ -70,20 +62,17 @@ export function CityHome({
       <section className={styles.hero} aria-labelledby={heroId}>
         <Reveal className={styles.heroText} index={0}>
           <h1 id={heroId} className={styles.heroTitle}>
-            Пять решений.
+            {copy.heroLine1}
             <br />
-            Один город.
+            {copy.heroLine2}
           </h1>
-          <p className={styles.heroLead}>
-            Вы — аким на пять часов. Выберите меры для районов в пределах бюджета: сервер
-            рассчитает, как изменится качество жизни, и объяснит, почему.
-          </p>
+          <p className={styles.heroLead}>{copy.heroLead}</p>
           <div className={styles.heroActions}>
             <Button size="lg" asChild>
-              <Link href={decisionsHref}>Принять решения</Link>
+              <Link href={decisionsHref}>{copy.ctaDecide}</Link>
             </Button>
             <a href={`#${howId}`} className={styles.textLink}>
-              Как это работает
+              {copy.howLink}
             </a>
           </div>
         </Reveal>
@@ -101,43 +90,40 @@ export function CityHome({
             <>
               <dl className={styles.factList}>
                 <div className={styles.fact}>
-                  <dt>Исходный Score</dt>
-                  <dd className={styles.factValueLarge}>{formatScore(scenario.baselineScore)}</dd>
+                  <dt>{copy.factScore}</dt>
+                  <dd className={styles.factValueLarge}>{score(scenario.baselineScore)}</dd>
                 </div>
                 <div className={styles.fact}>
-                  <dt>Бюджет</dt>
+                  <dt>{copy.factBudget}</dt>
                   <dd>
-                    {formatAmount(scenario.budget)} <span className={styles.factUnit}>ед.</span>
+                    {amount(scenario.budget)} <span className={styles.factUnit}>{copy.factBudgetUnit}</span>
                   </dd>
                 </div>
                 <div className={styles.fact}>
-                  <dt>Горизонт</dt>
+                  <dt>{copy.factHorizon}</dt>
                   <dd>
-                    {formatAmount(scenario.horizonQuarters)}{" "}
-                    <span className={styles.factUnit}>
-                      {plural(scenario.horizonQuarters, ["квартал", "квартала", "кварталов"])}
-                    </span>
+                    {amount(scenario.horizonQuarters)}{" "}
+                    <span className={styles.factUnit}>{copy.quarters(scenario.horizonQuarters)}</span>
                   </dd>
                 </div>
               </dl>
               {scenario.source === "fixture" ? (
-                <Badge tone="warning">Демонстрационные данные, не ответ API</Badge>
+                <Badge tone="warning">{copy.fixtureBadge}</Badge>
               ) : null}
             </>
           ) : scenarioStatus === "error" ? (
             <div className={styles.factsError} role="alert">
               <p>
-                <strong>Данные сценария недоступны.</strong>{" "}
-                {scenarioError ?? "Не удалось получить бюджет, Score и районы."}
+                <strong>{copy.errorTitle}</strong> {scenarioError ?? copy.errorFallback}
               </p>
               <Button variant="secondary" onClick={onRetry}>
-                Повторить загрузку
+                {copy.retry}
               </Button>
             </div>
           ) : (
             <div className={styles.factList} aria-busy="true">
               <p className="visually-hidden" aria-live="polite">
-                Загружаем данные сценария…
+                {copy.loading}
               </p>
               {[0, 1, 2].map((key) => (
                 <div key={key} className={styles.fact}>
@@ -154,7 +140,7 @@ export function CityHome({
       <section id={howId} className={styles.section} aria-labelledby={`${howId}-title`}>
         <Reveal className={styles.sectionHead}>
           <h2 id={`${howId}-title`} className={styles.sectionTitle}>
-            Как это работает
+            {copy.howTitle}
           </h2>
         </Reveal>
         <ol className={styles.steps} role="list">
@@ -174,12 +160,9 @@ export function CityHome({
       <section className={styles.section} aria-labelledby={districtsId}>
         <Reveal className={styles.sectionHead}>
           <h2 id={districtsId} className={styles.sectionTitle}>
-            Районы до решений
+            {copy.districtsTitle}
           </h2>
-          <p className={styles.sectionLead}>
-            Исходные показатели на шкале 0–100. Выбранный район будет предложен для районных мер —
-            назначение можно изменить в каждой карточке.
-          </p>
+          <p className={styles.sectionLead}>{copy.districtsLead}</p>
         </Reveal>
         {ready ? (
           <Reveal>
@@ -192,9 +175,9 @@ export function CityHome({
           </Reveal>
         ) : scenarioStatus === "error" ? (
           <div className={styles.placeholder}>
-            <p>Схема и показатели районов появятся после загрузки сценария.</p>
+            <p>{copy.districtsPlaceholder}</p>
             <Button variant="secondary" onClick={onRetry}>
-              Повторить загрузку
+              {copy.retry}
             </Button>
           </div>
         ) : (
@@ -209,16 +192,11 @@ export function CityHome({
       <section className={styles.final} aria-labelledby={finalId}>
         <Reveal className={styles.finalInner}>
           <h2 id={finalId} className={styles.finalTitle}>
-            Готовы принять решения?
+            {copy.finalTitle}
           </h2>
-          <p className={styles.finalText}>
-            {selectedName
-              ? `Район «${selectedName}» уже предложен для районных мер.`
-              : "Район для каждой меры выбирается прямо в её карточке."}{" "}
-            Черновик плана сохранится, пока вы переходите между страницами.
-          </p>
+          <p className={styles.finalText}>{copy.finalText(selectedName)}</p>
           <Button size="lg" asChild>
-            <Link href={decisionsHref}>Принять решения</Link>
+            <Link href={decisionsHref}>{copy.ctaDecide}</Link>
           </Button>
         </Reveal>
       </section>

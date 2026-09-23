@@ -8,14 +8,14 @@ import type {
 } from "@/lib/contracts/ui";
 import { Button } from "@/components/ui";
 import { DistrictChoice } from "./DistrictChoice";
-import { CATEGORY_LABELS, formatSigned, formatUnits } from "./labels";
+import { describeBlock, type PlannerText } from "./localize";
 import type { DistrictOption, MeasureAvailability } from "./selection-rules";
 import styles from "./planner.module.css";
 
 interface MeasureCardProps {
   readonly measure: MeasureVM;
+  readonly t: PlannerText;
   readonly budget: number;
-  readonly indicatorNames: ReadonlyMap<IndicatorId, string>;
   /** Текущий выбор этой меры в черновике или undefined, если мера не выбрана. */
   readonly choice: ChoiceDraft | undefined;
   readonly availability: MeasureAvailability;
@@ -33,8 +33,8 @@ interface MeasureCardProps {
 
 export function MeasureCard({
   measure,
+  t,
   budget,
-  indicatorNames,
   choice,
   availability,
   showDistrictChoice,
@@ -50,9 +50,10 @@ export function MeasureCard({
   const reasonsId = useId();
   const detailsId = useId();
   const [isOpen, setOpen] = useState(false);
+  const copy = t.copy;
   const effects = Object.entries(measure.effects) as [IndicatorId, number][];
   const isSelected = choice !== undefined;
-  const reasons = availability.status === "blocked" ? availability.reasons : [];
+  const reasons = availability.status === "blocked" ? availability.reasons.map((reason) => describeBlock(reason, t)) : [];
   const costShare = budget > 0 ? Math.min(1, measure.cost / budget) : 0;
 
   return (
@@ -60,10 +61,10 @@ export function MeasureCard({
       <div className={styles.cardTop}>
         <span className={styles.measureId}>{measure.id}</span>
         <h3 id={titleId} className={styles.cardTitle}>
-          {measure.name}
+          {t.measure(measure.id)}
         </h3>
         <p className={styles.cardCost}>
-          <strong>{formatUnits(measure.cost)}</strong> ед.
+          <strong>{t.units(measure.cost)}</strong> {copy.unit}
         </p>
       </div>
 
@@ -73,33 +74,33 @@ export function MeasureCard({
 
       <dl className={styles.facts}>
         <div>
-          <dt>Направление</dt>
-          <dd>{CATEGORY_LABELS[measure.category]}</dd>
+          <dt>{copy.factCategory}</dt>
+          <dd>{t.category(measure.category)}</dd>
         </div>
         <div>
-          <dt>Охват</dt>
-          <dd>{measure.scope === "city" ? "Весь город" : "Один район"}</dd>
+          <dt>{copy.factScope}</dt>
+          <dd>{measure.scope === "city" ? copy.scopeCity : copy.scopeDistrict}</dd>
         </div>
         <div>
-          <dt>Лаг</dt>
-          <dd>{formatUnits(measure.lagQuarters)} кв.</dd>
+          <dt>{copy.factLag}</dt>
+          <dd>{copy.lag(t.units(measure.lagQuarters), measure.lagQuarters)}</dd>
         </div>
       </dl>
 
       <div className={styles.effectRow}>
         {effects.length > 0 ? (
-          <ul className={styles.effectChips} aria-label="Эффекты из каталога">
+          <ul className={styles.effectChips} aria-label={copy.effectsLabel}>
             {effects.map(([indicatorId, value]) => (
               <li key={indicatorId} data-sign={value < 0 ? "negative" : "positive"}>
                 <span aria-hidden="true">{value < 0 ? "▼ " : "▲ "}</span>
                 {/* Ухудшение не прячем: у отрицательного эффекта сразу видно название показателя. */}
-                {value < 0 ? `${indicatorNames.get(indicatorId) ?? indicatorId} ` : `${indicatorId} `}
-                <strong>{formatSigned(value)}</strong>
+                {value < 0 ? `${t.indicator(indicatorId)} ` : `${indicatorId} `}
+                <strong>{t.signed(value)}</strong>
               </li>
             ))}
           </ul>
         ) : (
-          <p className={styles.textMuted}>Эффекты в каталоге не указаны.</p>
+          <p className={styles.textMuted}>{copy.noEffects}</p>
         )}
         <button
           type="button"
@@ -108,38 +109,37 @@ export function MeasureCard({
           aria-controls={detailsId}
           onClick={() => setOpen((open) => !open)}
         >
-          {isOpen ? "Скрыть" : "Подробнее"}
+          {isOpen ? copy.hideDetails : copy.details}
           <span className={styles.chevron} aria-hidden="true" />
         </button>
       </div>
 
       <div id={detailsId} className={styles.details} data-open={isOpen} inert={!isOpen}>
         <div className={styles.detailsInner}>
-          <p className={styles.textMuted}>Полный эффект из каталога, без учёта лага</p>
+          <p className={styles.textMuted}>{copy.fullEffectNote}</p>
           <ul className={styles.effectList}>
             {effects.map(([indicatorId, value]) => (
               <li key={indicatorId} data-sign={value < 0 ? "negative" : "positive"}>
                 <span>
-                  {indicatorId} {indicatorNames.get(indicatorId) ?? ""}
+                  {indicatorId} {t.indicator(indicatorId)}
                 </span>
                 <strong>
                   <span aria-hidden="true">{value < 0 ? "▼ " : "▲ "}</span>
-                  {formatSigned(value)}
+                  {t.signed(value)}
                 </strong>
               </li>
             ))}
           </ul>
           {synergyPartners.length > 0 ? (
-            <p className={styles.textMuted}>
-              Возможная синергия с {synergyPartners.join(", ")}. Сработает ли она, покажет оценка сервера.
-            </p>
+            <p className={styles.textMuted}>{copy.cardSynergy(synergyPartners.join(", "))}</p>
           ) : null}
         </div>
       </div>
 
       {measure.scope === "district" && showDistrictChoice ? (
         <DistrictChoice
-          legend={isSelected ? "Назначенный район" : "Район"}
+          t={t}
+          legend={isSelected ? copy.assignedDistrictLegend : copy.districtLegend}
           options={districtOptions}
           value={isSelected ? (choice.districtId ?? "") : pendingDistrictId}
           onChange={isSelected ? onDistrictChange : onPendingDistrictChange}
@@ -147,7 +147,7 @@ export function MeasureCard({
           {isSelected && !choice.districtId ? (
             <p className={styles.textWarning}>
               <span aria-hidden="true">! </span>
-              Выберите район: без него оценка недоступна.
+              {copy.chooseDistrictWarning}
             </p>
           ) : null}
         </DistrictChoice>
@@ -158,10 +158,10 @@ export function MeasureCard({
           <>
             <p className={styles.selectedMark}>
               <span className={styles.check} aria-hidden="true" />
-              В плане
+              {copy.inPlan}
             </p>
             <Button variant="secondary" onClick={onRemove}>
-              Убрать
+              {copy.remove}
             </Button>
           </>
         ) : (
@@ -171,14 +171,14 @@ export function MeasureCard({
             aria-describedby={reasons.length > 0 ? reasonsId : undefined}
             onClick={onAdd}
           >
-            Добавить в план
+            {copy.addToPlan}
           </Button>
         )}
       </div>
       {reasons.length > 0 ? (
         <ul id={reasonsId} className={styles.reasons}>
-          {reasons.map((reason) => (
-            <li key={reason}>
+          {reasons.map((reason, index) => (
+            <li key={`${reason}-${index}`}>
               <span aria-hidden="true">✕ </span>
               {reason}
             </li>

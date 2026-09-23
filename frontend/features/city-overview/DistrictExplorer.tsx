@@ -6,7 +6,7 @@ import { Badge, Panel, cx } from "@/components/ui";
 import { DistrictAtlas } from "./DistrictAtlas";
 import { DistrictDetails } from "./DistrictDetails";
 import { summarizeDistrict } from "./district-summary";
-import { formatAmount, formatScore, formatShare, plural } from "./format";
+import { useCityCopy } from "./use-city-copy";
 import styles from "./city-overview.module.css";
 
 export interface DistrictExplorerProps {
@@ -29,6 +29,7 @@ export function DistrictExplorer({
   const listHeadingId = `${uid}-list`;
   const { criticalThreshold, indicators, districts } = scenario;
   const ListHeading = headingLevel === 2 ? "h2" : "h3";
+  const { copy, amount, score, share, district: districtLabel, indicator: indicatorLabel } = useCityCopy();
 
   const summaries = useMemo(
     () => districts.map((district) => summarizeDistrict(district, indicators, criticalThreshold)),
@@ -36,7 +37,7 @@ export function DistrictExplorer({
   );
 
   const selectedSummary = summaries.find((summary) => summary.district.id === selectedDistrictId) ?? null;
-  const thresholdLabel = formatAmount(criticalThreshold);
+  const thresholdLabel = amount(criticalThreshold);
 
   return (
     <div className={styles.explorer}>
@@ -62,7 +63,7 @@ export function DistrictExplorer({
 
       <section aria-labelledby={listHeadingId} className={styles.listSection}>
         <ListHeading id={listHeadingId} className={styles.sectionTitle}>
-          Все районы
+          {copy.allDistricts}
         </ListHeading>
         <ul className={styles.cards} role="list">
           {summaries.map(({ district, readings, critical, weakest }) => {
@@ -77,17 +78,14 @@ export function DistrictExplorer({
                   onClick={() => onSelectDistrict(district.id)}
                 >
                   <span className={styles.cardHead}>
-                    <span className={styles.cardName}>{district.name}</span>
+                    <span className={styles.cardName}>{districtLabel(district)}</span>
                     {isSelected ? (
                       <span className={styles.cardSelectedMark}>
-                        <span aria-hidden="true">●</span> Выбран
+                        <span aria-hidden="true">●</span> {copy.selected}
                       </span>
                     ) : null}
                   </span>
-                  <span className={styles.cardShare}>
-                    <span className={styles.cardShareValue}>{formatShare(district.populationShare)}</span>{" "}
-                    жителей города
-                  </span>
+                  <span className={styles.cardShare}>{copy.cardShare(share(district.populationShare))}</span>
                   <span className={styles.cardStrip} aria-hidden="true">
                     {readings.map((reading) => (
                       <span
@@ -103,16 +101,14 @@ export function DistrictExplorer({
                   </span>
                   {criticalCount > 0 ? (
                     <Badge tone="danger">
-                      <span aria-hidden="true">▼</span> {criticalCount}{" "}
-                      {plural(criticalCount, ["показатель", "показателя", "показателей"])} ниже {thresholdLabel}
+                      <span aria-hidden="true">▼</span> {copy.criticalBadge(criticalCount, thresholdLabel)}
                     </Badge>
                   ) : (
-                    <Badge tone="neutral">Нет значений ниже {thresholdLabel}</Badge>
+                    <Badge tone="neutral">{copy.noCritical(thresholdLabel)}</Badge>
                   )}
                   {weakest ? (
                     <span className={styles.cardWeakest}>
-                      Самый низкий: {weakest.indicator.name},{" "}
-                      <span className="tabular">{formatScore(weakest.value)}</span>
+                      {copy.weakest(indicatorLabel(weakest.indicator), score(weakest.value))}
                     </span>
                   ) : null}
                 </button>
@@ -124,11 +120,7 @@ export function DistrictExplorer({
 
       <p className="visually-hidden" aria-live="polite">
         {selectedSummary
-          ? `Выбран район ${selectedSummary.district.name}: ${
-              selectedSummary.critical.length > 0
-                ? `${selectedSummary.critical.length} ${plural(selectedSummary.critical.length, ["показатель", "показателя", "показателей"])} ниже ${thresholdLabel}`
-                : `нет показателей ниже ${thresholdLabel}`
-            }.`
+          ? copy.liveSelected(districtLabel(selectedSummary.district), selectedSummary.critical.length, thresholdLabel)
           : ""}
       </p>
     </div>

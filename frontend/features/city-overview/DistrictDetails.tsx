@@ -1,6 +1,6 @@
 import { Badge, Metric, cx } from "@/components/ui";
 import type { DistrictSummary } from "./district-summary";
-import { formatAmount, formatScore, formatShare, plural } from "./format";
+import { useCityCopy } from "./use-city-copy";
 import styles from "./city-overview.module.css";
 
 interface DistrictDetailsProps {
@@ -25,19 +25,16 @@ export function DistrictDetails({
 }: DistrictDetailsProps) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const SubHeading = headingLevel === 2 ? "h3" : "h4";
-  const thresholdLabel = formatAmount(criticalThreshold);
+  const { copy, amount, score, share, district: districtLabel, indicator: indicatorLabel } = useCityCopy();
+  const thresholdLabel = amount(criticalThreshold);
 
   if (!summary) {
     return (
       <div className={styles.detailsEmpty}>
         <Heading id={headingId} className={styles.detailsTitle}>
-          Район не выбран
+          {copy.detailsEmptyTitle}
         </Heading>
-        <p className={styles.muted}>
-          Выберите район на схеме или в списке ниже. Здесь появятся его {indicatorCount}{" "}
-          {plural(indicatorCount, ["исходный показатель", "исходных показателя", "исходных показателей"])}{" "}
-          и отметки о значениях ниже порога {thresholdLabel}.
-        </p>
+        <p className={styles.muted}>{copy.detailsEmptyText(indicatorCount, thresholdLabel)}</p>
       </div>
     );
   }
@@ -49,12 +46,12 @@ export function DistrictDetails({
     <div className={styles.details}>
       <div className={styles.detailsHead}>
         <Heading id={headingId} className={styles.detailsTitle}>
-          {district.name}
+          {districtLabel(district)}
         </Heading>
         <div className={styles.detailsMetrics}>
-          <Metric size="md" label="Доля населения" value={formatShare(district.populationShare)} />
+          <Metric size="md" label={copy.populationShare} value={share(district.populationShare)} />
           {district.score !== undefined ? (
-            <Metric size="md" label="Балл района" value={formatScore(district.score)} />
+            <Metric size="md" label={copy.districtScore} value={score(district.score)} />
           ) : null}
         </div>
       </div>
@@ -63,30 +60,32 @@ export function DistrictDetails({
         {criticalCount > 0 ? (
           <>
             <span aria-hidden="true">▼ </span>
-            {criticalCount} {plural(criticalCount, ["показатель", "показателя", "показателей"])} ниже
-            критического порога {thresholdLabel}:{" "}
-            {critical.map((reading) => reading.indicator.name).join(", ")}.
+            {copy.criticalNote(
+              criticalCount,
+              thresholdLabel,
+              critical.map((reading) => indicatorLabel(reading.indicator)).join(", "),
+            )}
           </>
         ) : (
-          <>Ни один показатель не ниже критического порога {thresholdLabel}.</>
+          <>{copy.noneCritical(thresholdLabel)}</>
         )}
       </p>
 
-      <SubHeading className={styles.readingsTitle}>Исходные показатели, шкала 0–100</SubHeading>
+      <SubHeading className={styles.readingsTitle}>{copy.readingsTitle}</SubHeading>
       <ul className={styles.readings} role="list">
         {readings.map(({ indicator, value, isCritical }) => (
           <li key={indicator.id} className={cx(styles.reading, isCritical && styles.readingCritical)}>
             <span className={styles.readingName}>
               <span className={styles.readingId}>{indicator.id}</span>
-              {indicator.name}
+              {indicatorLabel(indicator)}
             </span>
             <span className={styles.readingValue}>
               {isCritical ? (
                 <Badge tone="danger" className={styles.readingFlag}>
-                  <span aria-hidden="true">▼</span> ниже {thresholdLabel}
+                  <span aria-hidden="true">▼</span> {copy.belowFlag(thresholdLabel)}
                 </Badge>
               ) : null}
-              <data value={value}>{formatScore(value)}</data>
+              <data value={value}>{score(value)}</data>
             </span>
             <span className={styles.readingTrack} aria-hidden="true">
               <span className={styles.readingFill} style={{ width: `${toPercent(value)}%` }} />
