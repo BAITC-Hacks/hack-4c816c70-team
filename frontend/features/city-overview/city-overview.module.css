@@ -1,0 +1,618 @@
+/* ===== Каркас обзора ===== */
+.overview {
+  display: grid;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: var(--space-6) var(--page-gutter) var(--space-7);
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+.sectionTitle {
+  font-size: var(--text-xl);
+  letter-spacing: -0.01em;
+}
+
+/* ===== Верхняя полоса: исходные параметры ===== */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: end;
+}
+
+.heroIntro {
+  display: grid;
+  gap: var(--space-3);
+  align-content: end;
+  max-width: 36rem;
+}
+
+.heroTitle {
+  font-size: var(--text-3xl);
+  letter-spacing: -0.02em;
+}
+
+.heroLead {
+  color: var(--color-muted);
+  max-width: 34em;
+}
+
+.sourceBadge {
+  justify-self: start;
+}
+
+.heroMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: var(--space-4);
+  border-top: 2px solid var(--color-ink);
+}
+
+.heroMetric {
+  padding: var(--space-4) 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.heroMetricScore {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 768px) {
+  .heroMetrics {
+    grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+    column-gap: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .heroMetric {
+    border-bottom: 0;
+    padding: var(--space-4) var(--space-4) var(--space-2);
+  }
+
+  .heroMetric + .heroMetric,
+  .heroMetricScore + .heroMetric {
+    padding-left: var(--space-5);
+    border-left: 1px solid var(--color-border);
+  }
+
+  .heroMetricScore {
+    grid-column: auto;
+    padding-left: 0;
+  }
+}
+
+@media (min-width: 1200px) {
+  .hero {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr);
+    gap: var(--space-7);
+  }
+}
+
+/* ===== Сцена: атлас + подробности ===== */
+.stage {
+  display: grid;
+  gap: var(--space-5);
+}
+
+@media (min-width: 1024px) {
+  .stage {
+    grid-template-columns: minmax(0, 1.45fr) minmax(360px, 1fr);
+    align-items: start;
+  }
+}
+
+.atlasPanel {
+  overflow: hidden;
+}
+
+/* ===== Атлас ===== */
+.atlas {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.atlasSvg {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  font-family: var(--font-sans);
+  user-select: none;
+}
+
+.gridDot {
+  fill: var(--color-border-strong);
+  opacity: 0.55;
+}
+
+.street {
+  fill: none;
+  stroke: var(--color-surface);
+  stroke-width: 6;
+}
+
+.riverEdge {
+  fill: none;
+  stroke: var(--color-water-edge);
+  stroke-width: 26;
+  stroke-linejoin: round;
+}
+
+.river {
+  fill: none;
+  stroke: var(--color-water);
+  stroke-width: 20;
+  stroke-linejoin: round;
+}
+
+.bridge {
+  fill: none;
+  stroke: var(--color-surface);
+  stroke-width: 5;
+}
+
+.plate {
+  cursor: pointer;
+  outline: none;
+}
+
+.plateShape {
+  fill: var(--color-surface);
+  stroke: var(--color-border-strong);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  transition: fill var(--duration-fast) var(--ease-standard);
+}
+
+.plate:hover .plateShape {
+  fill: var(--color-accent-soft);
+}
+
+.plateFocus {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 4;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.plate:focus-visible .plateFocus {
+  stroke: var(--color-focus);
+  stroke-dasharray: 10 6;
+}
+
+.plateSelected .plateShape,
+.plateSelected:hover .plateShape {
+  fill: var(--color-accent);
+  stroke: var(--color-accent-strong);
+  stroke-width: 2;
+}
+
+.plateSelected:focus-visible .plateFocus {
+  stroke: var(--color-ink);
+}
+
+/* Узел района: маленький квадрат, как точка на мнемосхеме */
+.plateNode {
+  fill: var(--color-ink);
+}
+
+.plateSelected .plateNode {
+  fill: var(--color-accent-soft);
+}
+
+.plateName {
+  fill: var(--color-ink);
+  font-size: 21px;
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.plateMeta {
+  fill: var(--color-muted);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.plateSelected .plateName {
+  fill: var(--color-accent-ink);
+}
+
+.plateSelected .plateMeta {
+  fill: var(--color-accent-soft);
+}
+
+.plateBar {
+  fill: var(--color-ink-soft);
+  opacity: 0.32;
+}
+
+.plateBarCritical {
+  fill: var(--color-danger);
+}
+
+.plateThreshold {
+  stroke: var(--color-ink);
+  stroke-width: 1.25;
+  stroke-dasharray: 3 3;
+}
+
+.plateSelected .plateBar {
+  fill: var(--color-accent-soft);
+  opacity: 0.6;
+}
+
+.plateSelected .plateBarCritical {
+  fill: var(--color-surface);
+}
+
+.plateSelected .plateThreshold {
+  stroke: var(--color-accent-soft);
+}
+
+.platePillBox {
+  fill: var(--color-surface);
+  stroke: var(--color-danger);
+  stroke-width: 1.5;
+}
+
+.platePillText {
+  fill: var(--color-danger);
+  font-size: 13px;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.atlasCaption {
+  display: grid;
+  gap: 2px;
+  padding-inline: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  max-width: 62em;
+}
+
+.atlasCaptionTitle {
+  color: var(--color-ink);
+  font-weight: var(--weight-semibold);
+}
+
+/* На узком экране подписи схемы крупнее, второстепенное — в карточках */
+@media (max-width: 599px) {
+  .plateNode {
+    display: none;
+  }
+
+  .plateName {
+    font-size: 25px;
+    transform: translateX(-18px);
+  }
+
+  .plateMeta {
+    display: none;
+  }
+
+  .plateProfile,
+  .platePill {
+    transform: translateY(-16px);
+  }
+
+  .platePillText {
+    font-size: 15px;
+  }
+}
+
+/* ===== Подробности района ===== */
+.details,
+.detailsEmpty {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.detailsEmpty {
+  min-height: 12rem;
+  align-content: center;
+}
+
+.detailsHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+
+.detailsTitle {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.015em;
+  min-width: 0;
+}
+
+.detailsMetrics {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.criticalNote {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.criticalNoteAlert {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
+}
+
+.readingsTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-muted);
+}
+
+.readings {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px var(--space-3);
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.reading:first-child {
+  border-top: 0;
+}
+
+.readingName {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: 1.35;
+}
+
+.readingId {
+  flex: none;
+  min-width: 2.2em;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.readingValue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-self: end;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.readingCritical .readingValue {
+  color: var(--color-danger);
+}
+
+.readingFlag {
+  white-space: nowrap;
+}
+
+.readingTrack {
+  position: relative;
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+}
+
+.readingFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--color-ink-soft);
+  opacity: 0.8;
+}
+
+.readingCritical .readingFill {
+  background: var(--color-danger);
+  opacity: 1;
+}
+
+/* Метка порога: вертикальная засечка поверх шкалы */
+.readingThreshold {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--color-ink);
+}
+
+/* ===== Карточки районов ===== */
+.listSection {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 1200px) {
+  .cards {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.cardItem {
+  display: flex;
+  min-width: 0;
+}
+
+.card {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  text-align: left;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.card:hover {
+  border-color: var(--color-accent);
+}
+
+.card:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.cardSelected {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.cardSelected:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--color-accent), var(--focus-ring);
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
+  width: 100%;
+}
+
+.cardName {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.cardSelectedMark {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent-strong);
+}
+
+.cardShare {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.cardShareValue {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Мини-профиль десяти показателей: столбики 0–100 и линия порога */
+.cardStrip {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: 3px;
+  width: 100%;
+  height: 48px;
+  padding-bottom: 1px;
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.stripBar {
+  display: block;
+  border-radius: 2px 2px 0 0;
+  background: var(--color-ink-soft);
+  opacity: 0.45;
+}
+
+.cardSelected .stripBar {
+  opacity: 0.6;
+}
+
+.stripBarCritical,
+.cardSelected .stripBarCritical {
+  background: var(--color-danger);
+  opacity: 1;
+}
+
+.stripThreshold {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed var(--color-ink);
+}
+
+.cardWeakest {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+/* ===== Переход к решениям ===== */
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.ctaText {
+  color: var(--color-muted);
+  max-width: 40em;
+}
+
+@media (max-width: 599px) {
+  .overview {
+    gap: var(--space-5);
+    padding-top: var(--space-5);
+  }
+
+  .heroTitle {
+    font-size: var(--text-2xl);
+  }
+
+  .cta > :last-child {
+    width: 100%;
+  }
+}

@@ -1,0 +1,675 @@
+/* Planner: только общие CSS variables из styles/tokens.css. Фоллбэки — значения design.md. */
+
+.planner {
+  --mobile-bar-height: 72px;
+  display: grid;
+  gap: var(--space-4, 16px);
+  color: var(--color-ink, #142d38);
+  font-family: var(--font-sans, "Segoe UI", Arial, sans-serif);
+  font-size: var(--text-md, 1rem);
+  line-height: var(--leading-body, 1.5);
+  min-width: 0;
+}
+
+.plannerHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+}
+
+.plannerTitle {
+  margin: 0;
+  font-size: var(--text-2xl, 1.75rem);
+  line-height: var(--leading-tight, 1.15);
+}
+
+.plannerHeader p,
+.catalog > p {
+  margin: var(--space-1, 4px) 0 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.lock {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  gap: var(--space-5, 24px);
+  align-items: start;
+}
+
+.catalog {
+  display: grid;
+  gap: var(--space-4, 16px);
+  min-width: 0;
+}
+
+/* ---------- Текстовые состояния: цвет всегда вместе со знаком ---------- */
+
+.textMuted {
+  margin: 0;
+  color: var(--color-muted, #536671);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.textWarning {
+  margin: 0;
+  color: var(--color-warning, #8a4b08);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--weight-medium, 500);
+}
+
+.textDanger {
+  margin: 0;
+  color: var(--color-danger, #b42332);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--weight-medium, 500);
+}
+
+.rulesMissing {
+  margin: 0;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border: 1px solid var(--color-warning, #8a4b08);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--color-warning-soft, #fbf0e1);
+  color: var(--color-warning, #8a4b08);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-5, 24px);
+  border: 1px dashed var(--color-border-strong, #b8c7c0);
+  border-radius: var(--radius-panel, 20px);
+  color: var(--color-muted, #536671);
+  text-align: center;
+}
+
+/* ---------- Кнопки: основа — Button из components/ui ---------- */
+
+.chip,
+.mobileSummary,
+.buttonLink {
+  font: inherit;
+  min-height: var(--control-height, 44px);
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  transition: background-color var(--duration-fast, 160ms) var(--ease-standard, ease);
+}
+
+.chip:focus-visible,
+.mobileSummary:focus-visible,
+.buttonLink:focus-visible,
+.select:focus-visible,
+.summary:focus-visible,
+.trayTitle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring, 0 0 0 3px #fff, 0 0 0 5px #006b60);
+}
+
+.buttonLink {
+  justify-self: start;
+  padding: 0 var(--space-2, 8px);
+  border: 0;
+  background: transparent;
+  color: var(--color-danger, #b42332);
+  font-weight: var(--weight-medium, 500);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.chip:disabled,
+.buttonLink:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ---------- Фильтры ---------- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+}
+
+.chip {
+  padding: 0 var(--space-4, 16px);
+  border: 1px solid var(--color-border-strong, #b8c7c0);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-surface, #fff);
+  color: var(--color-ink, #142d38);
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--color-ink, #142d38);
+  background: var(--color-ink, #142d38);
+  color: var(--color-on-ink, #f4f5ef);
+}
+
+.chipCount {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+/* ---------- Карточки мер ---------- */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: var(--space-4, 16px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cards > li {
+  display: flex;
+  min-width: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  width: 100%;
+  padding: var(--space-4, 16px);
+  border: 1px solid var(--color-border, #d7e1dc);
+  border-radius: var(--radius-panel, 20px);
+  background: var(--color-surface, #fff);
+  box-shadow: var(--shadow-panel, none);
+}
+
+.card[data-state="selected"] {
+  border: 2px solid var(--color-accent, #006b60);
+  background: linear-gradient(var(--color-accent-soft, #ddf3ec), var(--color-surface, #fff) 96px);
+}
+
+.card[data-state="blocked"] {
+  background: var(--color-surface-sunken, #eef1ea);
+  box-shadow: none;
+}
+
+.cardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+}
+
+.cardMeta {
+  margin: 0;
+  color: var(--color-muted, #536671);
+  font-size: var(--text-xs, 0.8125rem);
+  font-weight: var(--weight-semibold, 600);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.measureId {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink, #142d38);
+}
+
+.selectedMark {
+  margin: 0;
+  padding: 2px var(--space-2, 8px);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-accent, #006b60);
+  color: var(--color-accent-ink, #fff);
+  font-size: var(--text-xs, 0.8125rem);
+  font-weight: var(--weight-semibold, 600);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--text-lg, 1.125rem);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px) var(--space-5, 24px);
+  margin: 0;
+}
+
+.facts > div {
+  display: grid;
+}
+
+.facts dt {
+  color: var(--color-muted, #536671);
+  font-size: var(--text-xs, 0.8125rem);
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: var(--weight-semibold, 600);
+  font-variant-numeric: tabular-nums;
+}
+
+.effects {
+  display: grid;
+  gap: var(--space-1, 4px);
+}
+
+.effectsCaption {
+  margin: 0;
+  color: var(--color-muted, #536671);
+  font-size: var(--text-xs, 0.8125rem);
+}
+
+.effectList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1, 4px) var(--space-2, 8px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.effectList li {
+  padding: 2px var(--space-2, 8px);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--color-accent-soft, #ddf3ec);
+}
+
+.effectList li[data-sign="negative"] {
+  background: var(--color-danger-soft, #fbe9eb);
+  color: var(--color-danger, #b42332);
+}
+
+.effectValue {
+  font-weight: var(--weight-bold, 700);
+  font-variant-numeric: tabular-nums;
+}
+
+.cityNote {
+  margin: 0;
+  color: var(--color-muted, #536671);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.cardActions {
+  display: grid;
+  gap: var(--space-2, 8px);
+  margin-top: auto;
+}
+
+.reasons {
+  display: grid;
+  gap: var(--space-1, 4px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-danger, #b42332);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+/* ---------- Выбор района ---------- */
+
+.picker {
+  display: grid;
+  gap: var(--space-1, 4px);
+}
+
+.pickerLabel {
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--weight-semibold, 600);
+}
+
+.select {
+  width: 100%;
+  min-height: var(--control-height, 44px);
+  padding: 0 var(--space-3, 12px);
+  border: 1px solid var(--color-border-strong, #b8c7c0);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--color-surface, #fff);
+  color: var(--color-ink, #142d38);
+  font: inherit;
+}
+
+.select[aria-invalid="true"] {
+  border-color: var(--color-warning, #8a4b08);
+}
+
+.select:disabled {
+  background: var(--color-surface-sunken, #eef1ea);
+  color: var(--color-muted, #536671);
+}
+
+.pickerHint {
+  display: grid;
+  gap: 2px;
+}
+
+.pickerHint:empty {
+  display: none;
+}
+
+/* ---------- Панель решений ---------- */
+
+.tray {
+  position: sticky;
+  top: var(--space-4, 16px);
+  display: grid;
+  gap: var(--space-4, 16px);
+  max-height: calc(100dvh - 2 * var(--space-4, 16px));
+  overflow: auto;
+  padding: var(--space-5, 24px);
+  border: 1px solid var(--color-border, #d7e1dc);
+  border-radius: var(--radius-panel, 20px);
+  background: var(--color-surface, #fff);
+  box-shadow: var(--shadow-panel, none);
+  overscroll-behavior: contain;
+}
+
+.trayHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3, 12px);
+}
+
+.trayTitle {
+  margin: 0;
+  font-size: var(--text-xl, 1.375rem);
+  line-height: var(--leading-tight, 1.15);
+  border-radius: 4px;
+}
+
+.counter {
+  margin: 0 0 0 auto;
+  font-size: var(--text-xl, 1.375rem);
+  font-weight: var(--weight-bold, 700);
+  font-variant-numeric: tabular-nums;
+}
+
+.trayClose {
+  display: none;
+}
+
+.budget {
+  display: grid;
+  gap: var(--space-2, 8px);
+  padding: var(--space-4, 16px);
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-surface-sunken, #eef1ea);
+}
+
+.budgetRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.budgetRow strong {
+  font-size: var(--text-md, 1rem);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.budgetRow[data-over="true"] {
+  color: var(--color-danger, #b42332);
+}
+
+.budgetBar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-border, #d7e1dc);
+}
+
+.budgetBar span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent, #006b60);
+  transform-origin: left center;
+  transition: transform var(--duration-base, 200ms) var(--ease-standard, ease);
+}
+
+.budgetBar[data-over="true"] span {
+  background: var(--color-danger, #b42332);
+}
+
+.slots {
+  display: grid;
+  gap: var(--space-2, 8px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slot {
+  display: grid;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px);
+  border: 1px solid var(--color-border, #d7e1dc);
+  border-radius: var(--radius-md, 12px);
+}
+
+.slot[data-state="issue"] {
+  border-color: var(--color-warning, #8a4b08);
+  background: var(--color-warning-soft, #fbf0e1);
+}
+
+.slot[data-state="empty"] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  border-style: dashed;
+}
+
+.slotHead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3, 12px);
+}
+
+.slotIndex {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-surface-sunken, #eef1ea);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--weight-bold, 700);
+}
+
+.slotText {
+  flex: 1;
+  min-width: 0;
+}
+
+.slotName {
+  margin: 0;
+  font-weight: var(--weight-semibold, 600);
+  overflow-wrap: anywhere;
+}
+
+.slotCost {
+  flex: none;
+  font-weight: var(--weight-semibold, 600);
+  font-variant-numeric: tabular-nums;
+}
+
+.synergy {
+  display: grid;
+  gap: var(--space-1, 4px);
+  padding: var(--space-3, 12px);
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-accent-soft, #ddf3ec);
+}
+
+.synergy p {
+  margin: 0;
+}
+
+.summary {
+  display: grid;
+  gap: var(--space-2, 8px);
+  border-radius: var(--radius-sm, 8px);
+}
+
+.summary:empty {
+  display: none;
+}
+
+.summaryTitle {
+  margin: 0;
+  font-size: var(--text-md, 1rem);
+  font-weight: var(--weight-bold, 700);
+}
+
+.serverError {
+  display: grid;
+  gap: var(--space-1, 4px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border: 1px solid var(--color-danger, #b42332);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--color-danger-soft, #fbe9eb);
+  color: var(--color-danger, #b42332);
+}
+
+.serverError p {
+  margin: 0;
+}
+
+/* aria-disabled: кнопка остаётся фокусируемой и по нажатию ведёт к сводке причин. */
+.evaluate[aria-disabled="true"],
+.evaluateCompact[aria-disabled="true"] {
+  border-color: var(--color-border-strong, #b8c7c0);
+  background: var(--color-border-strong, #b8c7c0);
+  color: var(--color-ink, #142d38);
+  cursor: not-allowed;
+}
+
+.evaluate[aria-disabled="true"]:hover:not(:disabled),
+.evaluateCompact[aria-disabled="true"]:hover:not(:disabled) {
+  background: var(--color-border-strong, #b8c7c0);
+}
+
+/* ---------- Мобильная нижняя панель ---------- */
+
+.mobileBar {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .planner {
+    padding-bottom: calc(var(--mobile-bar-height) + var(--space-4, 16px) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 calc(-1 * var(--space-1, 4px));
+    padding: var(--space-1, 4px);
+    scrollbar-width: thin;
+  }
+
+  .chip {
+    flex: none;
+  }
+
+  .tray {
+    position: fixed;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom, 0px));
+    top: auto;
+    max-height: min(75dvh, calc(100dvh - var(--mobile-bar-height) - 48px));
+    padding: var(--space-4, 16px);
+    border-radius: var(--radius-panel, 20px) var(--radius-panel, 20px) 0 0;
+    box-shadow: var(--shadow-raised, none);
+  }
+
+  .planner[data-tray-open="false"] .tray {
+    display: none;
+  }
+
+  .trayClose {
+    display: inline-flex;
+  }
+
+  .mobileBar {
+    position: fixed;
+    z-index: 21;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    min-height: var(--mobile-bar-height);
+    padding: var(--space-2, 8px) var(--space-4, 16px) calc(var(--space-2, 8px) + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--color-border, #d7e1dc);
+    background: var(--color-surface, #fff);
+    box-shadow: var(--shadow-raised, none);
+  }
+
+  .mobileSummary {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--space-2, 8px);
+    min-width: 0;
+    padding: var(--space-1, 4px) var(--space-3, 12px);
+    border: 1px solid var(--color-border-strong, #b8c7c0);
+    background: var(--color-surface, #fff);
+    color: var(--color-ink, #142d38);
+    text-align: left;
+    font-size: var(--text-sm, 0.875rem);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mobileToggle {
+    margin-left: auto;
+    color: var(--color-accent, #006b60);
+    font-weight: var(--weight-semibold, 600);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .evaluateCompact {
+    flex: none;
+    padding: 0 var(--space-4, 16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .budgetBar span,
+  .chip,
+  .mobileSummary,
+  .buttonLink {
+    transition: none;
+  }
+}

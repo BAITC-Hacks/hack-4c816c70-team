@@ -1,0 +1,89 @@
+/*
+ * Единые токены «Аким на 5 часов».
+ * Базовые значения — из docs/design.md. Производные токены строятся только из них.
+ */
+:root {
+  /* Цвет: базовые токены design.md */
+  --color-canvas: #f4f5ef;
+  --color-surface: #ffffff;
+  --color-ink: #142d38;
+  --color-muted: #536671;
+  --color-accent: #006b60;
+  --color-accent-soft: #ddf3ec;
+  --color-warning: #8a4b08;
+  --color-danger: #b42332;
+  --color-border: #d7e1dc;
+
+  /* Производные оттенки */
+  --color-accent-strong: #00554c;
+  --color-accent-ink: #ffffff;
+  --color-surface-sunken: #eef1ea;
+  --color-border-strong: #b8c7c0;
+  --color-danger-soft: #fbe9eb;
+  --color-warning-soft: #fbf0e1;
+  --color-ink-soft: #1f3f4c;
+  --color-on-ink: #f4f5ef;
+  --color-on-ink-muted: #a9bcc2;
+  --color-water: #cfe4e6;
+  --color-water-edge: #a8cdd1;
+  --color-focus: #006b60;
+
+  /* Радиусы */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-panel: 20px;
+  --radius-pill: 999px;
+
+  /* Отступы: шаг 4, 8, 12, 16, 24, 32, 48 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Типографика */
+  --font-sans: "Segoe UI", "Segoe UI Variable Text", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --text-xs: 0.8125rem; /* 13 */
+  --text-sm: 0.875rem; /* 14 */
+  --text-md: 1rem; /* 16 */
+  --text-lg: 1.125rem; /* 18 */
+  --text-xl: 1.375rem; /* 22 */
+  --text-2xl: 1.75rem; /* 28 */
+  --text-3xl: 2.25rem; /* 36 */
+  --text-display: clamp(3rem, 2.2rem + 2.6vw, 4.5rem); /* 48–72 */
+  --leading-tight: 1.15;
+  --leading-body: 1.5;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Раскладка */
+  --content-max: 1440px;
+  --page-gutter: clamp(16px, 2.6vw, 40px);
+  --control-height: 44px;
+  --header-height: 64px;
+
+  /* Тени: умеренные, окрашенные в цвет ink */
+  --shadow-panel: 0 1px 2px rgb(20 45 56 / 0.06), 0 8px 24px -12px rgb(20 45 56 / 0.18);
+  --shadow-raised: 0 2px 4px rgb(20 45 56 / 0.08), 0 16px 32px -16px rgb(20 45 56 / 0.28);
+
+  /* Движение: 160–220 мс, только opacity/transform */
+  --duration-fast: 160ms;
+  --duration-base: 200ms;
+  --duration-slow: 220ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Фокус */
+  --focus-ring: 0 0 0 3px var(--color-surface), 0 0 0 5px var(--color-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}
