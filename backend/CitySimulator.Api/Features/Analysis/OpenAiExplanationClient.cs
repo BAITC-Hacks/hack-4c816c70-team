@@ -138,10 +138,10 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
 
     private ClaimOrder? ParseResponse(string payload, ClaimCatalog catalog, int attempt, int status, long elapsedMs)
     {
-        JsonNode? root;
+        JsonDocument document;
         try
         {
-            root = JsonNode.Parse(payload);
+            document = JsonDocument.Parse(payload);
         }
         catch (JsonException)
         {
@@ -149,35 +149,56 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
             return null;
         }
 
-        var usage = root?["usage"];
+        using var parsed = document;
+        var root = parsed.RootElement;
+        var responseStatus = StringProperty(root, "status");
+        if (root.ValueKind != JsonValueKind.Object || responseStatus != "completed")
+        {
+            logger.LogWarning("OpenAI explanation rejected: response is not a completed object");
+            return null;
+        }
+
+        root.TryGetProperty("usage", out var usage);
         logger.LogInformation(
             "OpenAI explanation attempt {Attempt}: HTTP {Status}, response status {ResponseStatus}, {ElapsedMs} ms, tokens input={InputTokens} output={OutputTokens} total={TotalTokens}",
-            attempt, status, root?["status"]?.GetValue<string>(), elapsedMs,
-            usage?["input_tokens"]?.GetValue<int>(), usage?["output_tokens"]?.GetValue<int>(), usage?["total_tokens"]?.GetValue<int>());
+            attempt, status, responseStatus, elapsedMs,
+            TokenCount(usage, "input_tokens"), TokenCount(usage, "output_tokens"), TokenCount(usage, "total_tokens"));
 
-        if (root?["status"]?.GetValue<string>() != "completed")
+        if (!root.TryGetProperty("output", out var output) || output.ValueKind != JsonValueKind.Array)
         {
-            logger.LogWarning("OpenAI explanation rejected: response is not completed");
+            logger.LogWarning("OpenAI explanation rejected: output is not an array");
             return null;
         }
 
         string? text = null;
-        foreach (var item in root["output"]?.AsArray() ?? [])
+        foreach (var item in output.EnumerateArray())
         {
-            if (item?["type"]?.GetValue<string>() != "message")
+            if (StringProperty(item, "type") != "message")
             {
                 continue;
             }
 
-            foreach (var content in item["content"]?.AsArray() ?? [])
+            if (!item.TryGetProperty("content", out var contents) || contents.ValueKind != JsonValueKind.Array)
             {
-                switch (content?["type"]?.GetValue<string>())
+                logger.LogWarning("OpenAI explanation rejected: message content is not an array");
+                return null;
+            }
+
+            foreach (var content in contents.EnumerateArray())
+            {
+                switch (StringProperty(content, "type"))
                 {
                     case "refusal":
                         logger.LogWarning("OpenAI explanation rejected: model refusal");
                         return null;
                     case "output_text":
-                        text = content["text"]?.GetValue<string>();
+                        // One structured answer is expected. Never guess which of several answers to trust.
+                        if (text is not null || StringProperty(content, "text") is not { } answer)
+                        {
+                            logger.LogWarning("OpenAI explanation rejected: invalid or multiple output_text values");
+                            return null;
+                        }
+                        text = answer;
                         break;
                 }
             }
@@ -197,6 +218,15 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
 
         return order;
     }
+
+    private static string? StringProperty(JsonElement element, string name) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value)
+        && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    // Optional diagnostics must never make an otherwise valid response fail with a 500.
+    private static int? TokenCount(JsonElement usage, string name) =>
+        usage.ValueKind == JsonValueKind.Object && usage.TryGetProperty(name, out var value)
+        && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var count) && count >= 0 ? count : null;
 
     private static bool IsTransient(int status) => status is 408 or 409 or 429 or >= 500;
 

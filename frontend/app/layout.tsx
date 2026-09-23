@@ -8,7 +8,11 @@ export const metadata: Metadata = {
   title: "Аким на 5 часов",
   description: "AI-симулятор городских решений для Astana Innovations",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico?v=akim-logo-1", sizes: "16x16 32x32 48x48" },
+      { url: "/city/akim-logo.svg?v=1", type: "image/svg+xml" },
+    ],
+    apple: "/city/akim-logo.png?v=1",
   },
 };
 

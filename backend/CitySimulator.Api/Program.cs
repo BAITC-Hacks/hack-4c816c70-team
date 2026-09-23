@@ -1,3 +1,4 @@
+using CitySimulator.Api;
 using CitySimulator.Api.Features.Analysis;
 using CitySimulator.Api.Features.Scenario;
 using CitySimulator.Api.Features.Simulation;
@@ -6,7 +7,7 @@ using Microsoft.AspNetCore.Diagnostics;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options => options.OperationFilter<ApiExamplesFilter>());
 // FRONTEND_ORIGIN: one origin or a comma-separated list, e.g. http://localhost:3001.
 var frontendOrigins = (builder.Configuration["FRONTEND_ORIGIN"] ?? string.Empty)
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

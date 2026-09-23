@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <title>Akim — city simulator</title>
+  <rect x="1" y="1" width="46" height="46" rx="12" fill="#006B60"/>
+  <path d="M9 31V25M16 31V20M24 31V21M32 31V20M39 31V25" stroke="#F8FAF5" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M19 18L24 23L29 18" stroke="#F8FAF5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="24" cy="12" r="4.5" fill="#E8BF72"/>
+  <path d="M9 38C15 34 19 41 25 38S34 35 39 37" stroke="#E8BF72" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

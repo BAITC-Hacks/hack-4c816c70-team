@@ -79,6 +79,14 @@ export interface ApiAppliedSynergyDto {
   delta: number;
 }
 
+export interface ApiAppliedEffectDto {
+  measureId: string;
+  districtId: string;
+  indicatorId: string;
+  /** Lag-adjusted contribution before synergies and final clipping. */
+  delta: number;
+}
+
 export interface ApiExplanationDto {
   summary: string;
   strengths: string[];
@@ -96,6 +104,8 @@ export interface ApiEvaluationDto {
   score: number;
   districts: ApiDistrictResultDto[];
   appliedSynergies: ApiAppliedSynergyDto[];
+  /** Optional while older API deployments are still in use. */
+  appliedEffects?: ApiAppliedEffectDto[];
   explanation: ApiExplanationDto;
   explanationSource: "llm" | "mock";
   explanationLocale: ApiExplanationLocale;

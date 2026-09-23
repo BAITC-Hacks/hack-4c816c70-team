@@ -41,6 +41,18 @@ public static class SimulationEndpoints
         var result = ScoreCalculator.Simulate(choices!);
         var spent = choices!.Sum(c => c.Measure.Cost);
 
+        var locale = ExplanationLocales.Resolve(acceptLanguage);
+        var (explanation, source) = await explanationService.ExplainAsync(choices!, baseline, result, spent, locale, cancellationToken);
+        httpContext.Response.Headers.ContentLanguage = locale;
+        return TypedResults.Ok(BuildResponse(choices!, baseline, result, explanation, source, locale));
+    }
+
+    // Swagger examples and the HTTP endpoint use the same response mapping.
+    internal static EvaluateResponse BuildResponse(IReadOnlyList<ValidatedChoice> choices,
+        SimulationOutcome baseline, SimulationOutcome result, Explanation explanation, string source,
+        string locale = ExplanationLocales.Russian)
+    {
+        var spent = choices.Sum(c => c.Measure.Cost);
         var districts = result.Districts
             .Select((after, i) =>
             {
@@ -55,11 +67,7 @@ public static class SimulationEndpoints
             })
             .ToList();
 
-        var locale = ExplanationLocales.Resolve(acceptLanguage);
-        var (explanation, source) = await explanationService.ExplainAsync(choices!, baseline, result, spent, locale, cancellationToken);
-        httpContext.Response.Headers.ContentLanguage = locale;
-
-        return TypedResults.Ok(new EvaluateResponse(
+        return new EvaluateResponse(
             spent,
             ScenarioData.Budget - spent,
             ScoreCalculator.Round(baseline.Score),
@@ -68,9 +76,10 @@ public static class SimulationEndpoints
             Breakdown(baseline),
             districts,
             result.AppliedSynergies,
+            result.AppliedEffects.Select(e => e with { Delta = ScoreCalculator.Round(e.Delta) }).ToList(),
             explanation,
             source,
-            locale));
+            locale);
     }
 
     private static ScoreBreakdown Breakdown(SimulationOutcome outcome) => new(
