@@ -32,6 +32,7 @@ import {
 } from "three";
 import type { DistrictId } from "@/lib/contracts/ui";
 import { ATLAS_SLOTS, ATLAS_VIEWBOX, assignSlots, type AtlasSlot } from "./atlas-layout";
+import { createCityLandmarks, nearLandmark } from "./city-landmarks";
 
 export interface CitySceneOptions {
   readonly districtIds: readonly DistrictId[];
@@ -188,6 +189,7 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
   let palette = readPalette();
   const geometries: BufferGeometry[] = [];
   const materials: Material[] = [];
+  const ownedInstances: InstancedMesh[] = [];
   const track = <G extends BufferGeometry>(geometry: G) => (geometries.push(geometry), geometry);
   const lambert = (color: Color) => {
     const material = new MeshLambertMaterial({ color });
@@ -223,6 +225,13 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
 
   const nodes: DistrictNode[] = [];
   const pickables: Mesh[] = [];
+  const roadMaterial = lambert(new Color("#829398"));
+  const facadeMaterial = lambert(new Color("#6b939e"));
+  const roadLinesX = [96, 204, 380, 520];
+  const roadLinesY = [96, 168, 300, 372];
+  const nearRoad = (x: number, y: number) =>
+    roadLinesX.some((axis) => Math.abs(x - axis) < 13) ||
+    roadLinesY.some((axis) => Math.abs(y - axis) < 12);
 
   ATLAS_SLOTS.forEach((slot: AtlasSlot) => {
     const polygon = parsePoints(slot.points);
@@ -236,6 +245,38 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
     const xs = polygon.map((p) => p[0]);
     const ys = polygon.map((p) => p[1]);
     const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+
+    // Streets are clipped to each district; broad avenues align with the bridges.
+    const roadSegments: Array<[number, number, number, number]> = [];
+    const clipRoad = (axis: number, vertical: boolean) => {
+      const start = vertical ? minY : minX;
+      const end = vertical ? maxY : maxX;
+      let beginning: number | null = null;
+      for (let cursor = start; cursor <= end + 2; cursor += 2) {
+        const x = vertical ? axis : cursor;
+        const y = vertical ? cursor : axis;
+        const inside = cursor <= end && insidePolygon(x, y, polygon) && !nearLandmark(x, y, -5);
+        if (inside && beginning === null) beginning = cursor;
+        if (!inside && beginning !== null) {
+          const length = cursor - beginning;
+          if (length > 4) roadSegments.push(vertical
+            ? [axis, beginning + length / 2, 7, length]
+            : [beginning + length / 2, axis, length, 7]);
+          beginning = null;
+        }
+      }
+    };
+    roadLinesX.forEach((axis) => clipRoad(axis, true));
+    roadLinesY.forEach((axis) => clipRoad(axis, false));
+    const roads = new InstancedMesh(boxGeometry, roadMaterial, roadSegments.length);
+    roadSegments.forEach(([x, y, width, depth], index) => {
+      dummy.position.set(toWorldX(x), 0.225, toWorldZ(y));
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(width / SCALE, 0.022, depth / SCALE);
+      dummy.updateMatrix(); roads.setMatrixAt(index, dummy.matrix);
+    });
+    ownedInstances.push(roads);
+    city.add(roads);
     // Парк: круг у дальнего от реки края области
     const parkX = minX + (maxX - minX) * (0.3 + random() * 0.4);
     const parkY = slot.anchor.y < 200 ? minY + 42 : maxY - 40;
@@ -246,43 +287,57 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
     const step = 24;
     for (let y = minY + 14; y < maxY - 8; y += step) {
       for (let x = minX + 14; x < maxX - 8; x += step) {
-        const jx = x + (random() - 0.5) * 6;
-        const jy = y + (random() - 0.5) * 6;
+        const jx = x + (random() - 0.5) * 2;
+        const jy = y + (random() - 0.5) * 2;
         const half = 7 + random() * 3;
         const corners: Array<[number, number]> = [
           [jx - half, jy - half], [jx + half, jy - half], [jx - half, jy + half], [jx + half, jy + half],
         ];
         if (!corners.every(([cx, cy]) => insidePolygon(cx, cy, polygon))) continue;
-        const nearPark = Math.hypot(jx - parkX, jy - parkY) < parkRadius + 6;
-        const nearTower = Math.hypot(jx - BAITEREK_AT[0], jy - BAITEREK_AT[1]) < 34;
+        if (nearLandmark(jx, jy, half * 0.7) || nearRoad(jx, jy)) continue;
+        const nearPark = Math.hypot(jx - parkX, jy - parkY) < parkRadius + 6 && !nearLandmark(parkX, parkY, parkRadius);
         if (nearPark) {
           if (random() > 0.35) trees.push([jx, jy]);
           continue;
         }
-        if (nearTower) continue;
-        if (random() < 0.2) continue; // просветы между кварталами
-        const tall = random() < 0.12;
-        const height = tall ? 2.4 + random() * 1.6 : 0.5 + random() * 1.3;
+        if (random() < 0.1) continue;
+        const downtown = jx > 260 && jx < 445 && jy < 160;
+        const tall = downtown && random() < 0.62;
+        const height = tall ? 2.3 + random() * 2.3 : 0.45 + random() * 1.25;
         lots.push([jx, jy, (half * 2 * (0.7 + random() * 0.25)) / SCALE, height]);
       }
     }
 
     const buildings = new InstancedMesh(boxGeometry, lambert(palette.building), Math.max(1, lots.length));
     buildings.count = lots.length;
+    const facadeBands: Array<[number, number, number, number, number]> = [];
     lots.forEach(([x, y, size, height], index) => {
+      const depth = size * (0.75 + random() * 0.3);
       dummy.position.set(toWorldX(x), 0.22, toWorldZ(y));
-      dummy.scale.set(size, height, size * (0.75 + random() * 0.3));
+      dummy.scale.set(size, height, depth);
       dummy.rotation.y = 0;
       dummy.updateMatrix();
       buildings.setMatrixAt(index, dummy.matrix);
+      buildings.setColorAt(index, new Color().setHSL(0.09, 0.08 + random() * 0.08, 0.78 + random() * 0.17));
+      for (let floor = 0.34; floor < height - 0.08; floor += 0.34) {
+        facadeBands.push([x, y, size, depth, floor]);
+      }
     });
+    const facades = new InstancedMesh(boxGeometry, facadeMaterial, facadeBands.length);
+    facadeBands.forEach(([x, y, width, depth, floor], index) => {
+      dummy.position.set(toWorldX(x), 0.22 + floor, toWorldZ(y));
+      dummy.scale.set(width + 0.012, 0.055, depth + 0.012);
+      dummy.updateMatrix(); facades.setMatrixAt(index, dummy.matrix);
+    });
+    city.add(facades);
+    ownedInstances.push(buildings, facades);
     buildings.userData.districtId = districtId;
     city.add(buildings);
     pickables.push(buildings);
 
     const park = new Mesh(track(new CylinderGeometry(parkRadius / SCALE, parkRadius / SCALE, 0.05, 28)), parkMaterial);
     park.position.set(toWorldX(parkX), 0.245, toWorldZ(parkY));
-    if (insidePolygon(parkX, parkY, polygon)) city.add(park);
+    if (insidePolygon(parkX, parkY, polygon) && !nearLandmark(parkX, parkY, parkRadius)) city.add(park);
 
     if (trees.length) {
       const forest = new InstancedMesh(treeGeometry, treeMaterial, trees.length);
@@ -292,6 +347,7 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
         forest.setMatrixAt(index, matrix);
       });
       city.add(forest);
+      ownedInstances.push(forest);
     }
 
     nodes.push({ districtId, plate, buildings });
@@ -304,14 +360,19 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
   materials.push(towerWhite, towerGold);
   const podium = new Mesh(track(new CylinderGeometry(0.85, 1, 0.22, 24)), towerWhite);
   podium.position.y = 0.33;
-  const shaft = new Mesh(track(new CylinderGeometry(0.1, 0.2, 4.6, 12)), towerWhite);
+  const shaft = new Mesh(track(new CylinderGeometry(0.26, 0.38, 4.6, 16)), towerWhite);
   shaft.position.y = 2.7;
   tower.add(podium, shaft);
-  const branchGeometry = track(new CylinderGeometry(0.035, 0.05, 1.5, 6));
+  // Broad fluted trunk and splayed crown remain legible at miniature scale.
+  const trunkRibGeometry = track(new CylinderGeometry(0.055, 0.075, 3.95, 6));
+  const branchGeometry = track(new CylinderGeometry(0.065, 0.085, 1.65, 8));
   for (let i = 0; i < 10; i += 1) {
     const branch = new Mesh(branchGeometry, towerWhite);
     const angle = (i / 10) * Math.PI * 2;
-    branch.position.set(Math.cos(angle) * 0.34, 5.15, Math.sin(angle) * 0.34);
+    const rib = new Mesh(trunkRibGeometry, towerWhite);
+    rib.position.set(Math.cos(angle) * 0.3, 2.6, Math.sin(angle) * 0.3);
+    tower.add(rib);
+    branch.position.set(Math.cos(angle) * 0.43, 5.05, Math.sin(angle) * 0.43);
     branch.rotation.set(Math.sin(angle) * 0.42, 0, -Math.cos(angle) * 0.42);
     tower.add(branch);
   }
@@ -321,6 +382,9 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
   tower.position.set(toWorldX(BAITEREK_AT[0]), 0, toWorldZ(BAITEREK_AT[1]));
   city.add(tower);
 
+  const landmarks = createCityLandmarks();
+  city.add(landmarks.group);
+
   // ===== Цвета и выбор =====
   let selected = options.selectedDistrictId;
   const applyColors = () => {
@@ -328,6 +392,10 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
     waterMaterial.color.copy(palette.water);
     parkMaterial.color.copy(palette.park);
     treeMaterial.color.copy(palette.tree);
+    const dark = document.documentElement.dataset.theme === "dark";
+    roadMaterial.color.setHex(dark ? 0x4c646b : 0x829398);
+    facadeMaterial.color.setHex(dark ? 0x729aa7 : 0x6b939e);
+    landmarks.setDark(dark);
     for (const node of nodes) {
       const isSelected = node.districtId !== null && node.districtId === selected;
       node.plate.material.color.copy(isSelected ? palette.plateSelected : palette.plate);
@@ -479,7 +547,8 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
       renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
       renderer.domElement.removeEventListener("click", onClick as EventListener);
       renderer.domElement.removeEventListener("webglcontextlost", onContextLost);
-      for (const node of nodes) node.buildings.dispose();
+      ownedInstances.forEach((mesh) => mesh.dispose());
+      landmarks.dispose();
       geometries.forEach((geometry) => geometry.dispose());
       materials.forEach((material) => material.dispose());
       renderer.dispose();
