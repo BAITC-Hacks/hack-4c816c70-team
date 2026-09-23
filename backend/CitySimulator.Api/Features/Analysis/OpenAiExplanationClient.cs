@@ -8,52 +8,43 @@ using CitySimulator.Api.Features.Simulation;
 namespace CitySimulator.Api.Features.Analysis;
 
 /// <summary>
-/// Calls OpenAI Responses API (POST /v1/responses) with Structured Outputs.
-/// Returns null on any failure so the caller falls back to the deterministic explanation.
-/// Never logs the API key, the request body or the model text.
+/// Calls OpenAI Responses API (POST /v1/responses) with Structured Outputs to prioritize server-written claims.
+/// The model returns only claim IDs; returns null on any failure so the caller keeps the default order.
+/// Never logs the API key, the request body or the model output.
 /// </summary>
 public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options, ILogger<OpenAiExplanationClient> logger)
 {
-    private static readonly JsonSerializerOptions FactsJsonOptions = new(JsonSerializerDefaults.Web)
+    private static readonly JsonSerializerOptions InputJsonOptions = new(JsonSerializerDefaults.Web)
     {
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
     private const string Instructions = """
-        Ты аналитик городского симулятора «Аким на 5 часов» (Астана). Пользователь выбрал 5 мер, сервер уже посчитал итоговый
-        Astana Quality of Life Score и все изменения. Объясни результат на русском языке для городского управленца.
+        Ты аналитик городского симулятора «Аким на 5 часов» (Астана). Пользователь выбрал 5 мер, сервер посчитал
+        Astana Quality of Life Score и сформулировал проверенные утверждения (claims) о сильных сторонах и рисках.
+        Твоя задача — только расставить приоритеты: упорядочить ID утверждений по важности для этого сценария.
 
         Правила:
-        - Используй только числа из входного JSON и копируй их без изменений. Ничего не вычисляй: не складывай, не вычитай,
-          не считай проценты и доли, не прогнозируй новых значений. Если нужного числа нет во входных данных — пиши словами.
-        - Не меняй Score и не оценивай набор по своей формуле; итог уже посчитан сервером.
-        - summary: 2–3 предложения — итоговый Score против базового, главный фактор изменения, компромисс набора.
-        - strengths: 2–4 пункта — какие меры и районы дали наибольший вклад (scoreImpact, изменения показателей, синергии).
-        - risks: 2–4 пункта — оставшиеся критические значения ниже 40, самый слабый район, неполный эффект из-за лага,
-          районы и направления без улучшений.
-        - Рекомендации не пиши: их формирует сервер из проверенных замен. Не предлагай замены, новые меры и переносы.
-        - Упоминай только выбранные меры и только в их районе из поля district.
-        - Пиши кратко, каждый пункт — одно-два предложения, без markdown.
+        - strengthOrder: все ID из claims.strengths ровно по одному разу, от самого важного к менее важному.
+        - riskOrder: все ID из claims.risks ровно по одному разу, от самого важного к менее важному.
+        - Не добавляй, не пропускай и не выдумывай ID; не переноси ID между секциями. Пустая секция — [].
+        - Важность оценивай по facts: влияние на Score (scoreImpact, изменение оценок районов), критические значения
+          ниже 40, самый слабый район (30% итогового балла), синергии и лаг. Текст не пиши.
         """;
 
-    private static readonly JsonObject ResponseSchema = new()
+    /// <summary>Returns a validated priority order of the catalog claims, or null to keep the default order.</summary>
+    public async Task<ClaimOrder?> TryRankAsync(AnalysisFacts facts, ClaimCatalog catalog, CancellationToken cancellationToken)
     {
-        ["type"] = "object",
-        ["properties"] = new JsonObject
+        var input = JsonSerializer.Serialize(new
         {
-            ["summary"] = new JsonObject { ["type"] = "string" },
-            ["strengths"] = StringArray(),
-            ["risks"] = StringArray(),
-        },
-        ["required"] = new JsonArray("summary", "strengths", "risks"),
-        ["additionalProperties"] = false,
-    };
-
-    public async Task<Explanation?> TryExplainAsync(
-        AnalysisFacts facts, IReadOnlySet<string> allowedMeasureIds, CancellationToken cancellationToken)
-    {
-        var factsJson = JsonSerializer.Serialize(facts, FactsJsonOptions);
-        var body = BuildRequestBody(factsJson);
+            facts,
+            claims = new
+            {
+                strengths = catalog.Strengths.Select(c => new { id = c.Id, text = c.Text }),
+                risks = catalog.Risks.Select(c => new { id = c.Id, text = c.Text }),
+            },
+        }, InputJsonOptions);
+        var body = BuildRequestBody(input, catalog);
         var total = Stopwatch.StartNew();
         var attempt = 0;
 
@@ -83,7 +74,7 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
                     if (response.IsSuccessStatusCode)
                     {
                         var payload = await response.Content.ReadAsStringAsync(deadline.Token);
-                        return ParseResponse(payload, factsJson, allowedMeasureIds, attempt, status, stopwatch.ElapsedMilliseconds);
+                        return ParseResponse(payload, catalog, attempt, status, stopwatch.ElapsedMilliseconds);
                     }
 
                     var transient = IsTransient(status);
@@ -122,31 +113,30 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
         return null;
     }
 
-    private string BuildRequestBody(string factsJson)
+    private string BuildRequestBody(string input, ClaimCatalog catalog)
     {
         var body = new JsonObject
         {
             ["model"] = options.Model,
             ["store"] = false,
-            ["max_output_tokens"] = 4000,
+            ["max_output_tokens"] = 1000,
             ["instructions"] = Instructions,
-            ["input"] = "Результат расчёта (JSON, все числа уже посчитаны сервером):\n" + factsJson,
+            ["input"] = "Результат расчёта и проверенные утверждения (JSON):\n" + input,
             ["text"] = new JsonObject
             {
                 ["format"] = new JsonObject
                 {
                     ["type"] = "json_schema",
-                    ["name"] = "scenario_explanation",
+                    ["name"] = "claim_priorities",
                     ["strict"] = true,
-                    ["schema"] = ResponseSchema.DeepClone(),
+                    ["schema"] = OrderSchema(catalog),
                 },
             },
         };
         return body.ToJsonString();
     }
 
-    private Explanation? ParseResponse(
-        string payload, string factsJson, IReadOnlySet<string> allowedMeasureIds, int attempt, int status, long elapsedMs)
+    private ClaimOrder? ParseResponse(string payload, ClaimCatalog catalog, int attempt, int status, long elapsedMs)
     {
         JsonNode? root;
         try
@@ -199,20 +189,38 @@ public sealed class OpenAiExplanationClient(HttpClient http, LlmOptions options,
             return null;
         }
 
-        if (!ExplanationValidator.TryParse(text, factsJson, allowedMeasureIds, out var explanation, out var reason))
+        if (!ExplanationValidator.TryParse(text, catalog, out var order, out var reason))
         {
             logger.LogWarning("OpenAI explanation rejected by validation: {Reason}", reason);
             return null;
         }
 
-        return explanation;
+        return order;
     }
 
     private static bool IsTransient(int status) => status is 408 or 409 or 429 or >= 500;
 
-    private static JsonObject StringArray() => new()
+    /// <summary>Strict schema: two arrays whose items are limited to the IDs of their own section.</summary>
+    private static JsonObject OrderSchema(ClaimCatalog catalog) => new()
     {
-        ["type"] = "array",
-        ["items"] = new JsonObject { ["type"] = "string" },
+        ["type"] = "object",
+        ["properties"] = new JsonObject
+        {
+            [ExplanationValidator.StrengthOrderField] = IdArray(catalog.Strengths),
+            [ExplanationValidator.RiskOrderField] = IdArray(catalog.Risks),
+        },
+        ["required"] = new JsonArray(ExplanationValidator.StrengthOrderField, ExplanationValidator.RiskOrderField),
+        ["additionalProperties"] = false,
     };
+
+    private static JsonObject IdArray(IReadOnlyList<Claim> claims)
+    {
+        var items = new JsonObject { ["type"] = "string" };
+        if (claims.Count > 0)
+        {
+            items["enum"] = new JsonArray(claims.Select(c => (JsonNode)JsonValue.Create(c.Id)!).ToArray());
+        }
+
+        return new JsonObject { ["type"] = "array", ["items"] = items };
+    }
 }

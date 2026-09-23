@@ -1,34 +1,23 @@
-using System.Globalization;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using CitySimulator.Api.Features.Simulation;
 
 namespace CitySimulator.Api.Features.Analysis;
 
+public sealed record ClaimOrder(IReadOnlyList<string> StrengthOrder, IReadOnlyList<string> RiskOrder);
+
 /// <summary>
-/// Validates the LLM output before it reaches the client: exact four-field shape, sane sizes,
-/// and every number in the text must come from the computed facts (the LLM must not invent numbers).
+/// Validates the LLM output before it is used: the model may only return a priority order of server claim IDs.
+/// Each section must be an exact permutation of its own IDs — no unknown values, duplicates, omissions,
+/// IDs from the other section or extra fields. An empty section accepts only [].
 /// </summary>
-public static partial class ExplanationValidator
+public static class ExplanationValidator
 {
-    public const int MaxSummaryLength = 1200;
-    public const int MaxItemLength = 500;
-    public const int MaxItems = 8;
+    public const string StrengthOrderField = "strengthOrder";
+    public const string RiskOrderField = "riskOrder";
 
-    // Recommendations are built by the server (RecommendationBuilder), not by the model.
-    private static readonly string[] Fields = ["summary", "strengths", "risks"];
-
-    // Small integers (counts, quarters, measure/indicator ordinals) and the formula weights in percent.
-    private static readonly double[] AlwaysAllowed = [.. Enumerable.Range(0, 21).Select(i => (double)i), 30, 70, 100];
-
-    public static bool TryParse(
-        string json,
-        string factsJson,
-        IReadOnlySet<string> allowedMeasureIds,
-        out Explanation? explanation,
-        out string reason)
+    public static bool TryParse(string json, ClaimCatalog catalog, out ClaimOrder? order, out string reason)
     {
-        explanation = null;
+        order = null;
         JsonElement root;
         try
         {
@@ -48,109 +37,71 @@ public static partial class ExplanationValidator
         }
 
         var names = root.EnumerateObject().Select(p => p.Name).ToList();
-        if (names.Count != Fields.Length || !Fields.All(names.Contains))
+        if (names.Count != 2 || !names.Contains(StrengthOrderField) || !names.Contains(RiskOrderField))
         {
-            reason = "output fields differ from summary/strengths/risks";
+            reason = $"output fields must be exactly {StrengthOrderField} and {RiskOrderField}";
             return false;
         }
 
-        var summary = root.GetProperty("summary");
-        if (summary.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(summary.GetString())
-            || summary.GetString()!.Length > MaxSummaryLength)
+        var strengthIds = catalog.Strengths.Select(c => c.Id).ToList();
+        var riskIds = catalog.Risks.Select(c => c.Id).ToList();
+        if (!TryPermutation(root.GetProperty(StrengthOrderField), StrengthOrderField, strengthIds, riskIds, out var strengths, out reason)
+            || !TryPermutation(root.GetProperty(RiskOrderField), RiskOrderField, riskIds, strengthIds, out var risks, out reason))
         {
-            reason = "summary must be a non-empty string";
             return false;
         }
 
-        var lists = new Dictionary<string, List<string>>();
-        foreach (var field in Fields.Skip(1))
-        {
-            var element = root.GetProperty(field);
-            if (element.ValueKind != JsonValueKind.Array || element.GetArrayLength() > MaxItems)
-            {
-                reason = $"{field} must be an array of at most {MaxItems} items";
-                return false;
-            }
-
-            var items = new List<string>();
-            foreach (var item in element.EnumerateArray())
-            {
-                if (item.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(item.GetString())
-                    || item.GetString()!.Length > MaxItemLength)
-                {
-                    reason = $"{field} items must be non-empty strings";
-                    return false;
-                }
-
-                items.Add(item.GetString()!.Trim());
-            }
-
-            lists[field] = items;
-        }
-
-        var candidate = new Explanation(summary.GetString()!.Trim(), lists["strengths"], lists["risks"], []);
-        var texts = new[] { candidate.Summary }
-            .Concat(candidate.Strengths).Concat(candidate.Risks)
-            .ToList();
-
-        // Only chosen measures may be named.
-        var foreignMeasures = texts
-            .SelectMany(t => MeasureIdPattern().Matches(t).Select(m => "M" + m.Groups[1].Value))
-            .Where(id => !allowedMeasureIds.Contains(id))
-            .Distinct()
-            .Count();
-        if (foreignMeasures > 0)
-        {
-            reason = $"text names {foreignMeasures} measure(s) that were not chosen";
-            return false;
-        }
-
-        var allowed = AllowedNumbers(factsJson);
-        var unknown = texts
-            .SelectMany(ExtractNumbers)
-            .Where(n => !allowed.Any(a => Math.Abs(a - n) < 0.0005))
-            .Distinct()
-            .ToList();
-        if (unknown.Count > 0)
-        {
-            // Numbers alone are safe to log; the model text itself is never logged.
-            reason = $"text contains {unknown.Count} number(s) not present in computed facts: " +
-                     string.Join(", ", unknown.Take(5).Select(n => n.ToString(CultureInfo.InvariantCulture)));
-            return false;
-        }
-
-        explanation = candidate;
+        order = new ClaimOrder(strengths, risks);
         reason = string.Empty;
         return true;
     }
 
-    private static List<double> AllowedNumbers(string factsJson)
+    private static bool TryPermutation(
+        JsonElement element,
+        string field,
+        IReadOnlyList<string> own,
+        IReadOnlyList<string> other,
+        out List<string> ids,
+        out string reason)
     {
-        var allowed = new List<double>(AlwaysAllowed);
-        foreach (var value in ExtractNumbers(factsJson))
+        ids = [];
+        if (element.ValueKind != JsonValueKind.Array)
         {
-            // Accept the exact value and its honest roundings/percent form; anything else is invented.
-            allowed.Add(value);
-            allowed.Add(ScoreCalculator.Round(Math.Round(value, 1, MidpointRounding.AwayFromZero)));
-            allowed.Add(Math.Round(value, 0, MidpointRounding.AwayFromZero));
-            if (value <= 1)
-            {
-                allowed.Add(ScoreCalculator.Round(value * 100));
-            }
+            reason = $"{field} must be an array";
+            return false;
         }
 
-        return allowed;
+        foreach (var item in element.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+            {
+                reason = $"{field} must contain only string IDs";
+                return false;
+            }
+
+            var id = item.GetString()!;
+            if (!own.Contains(id))
+            {
+                reason = other.Contains(id) ? $"{field} contains an ID from the other section" : $"{field} contains an unknown ID";
+                return false;
+            }
+
+            if (ids.Contains(id))
+            {
+                reason = $"{field} contains a duplicate ID";
+                return false;
+            }
+
+            ids.Add(id);
+        }
+
+        if (ids.Count != own.Count)
+        {
+            reason = $"{field} omits {own.Count - ids.Count} ID(s)";
+            return false;
+        }
+
+        reason = string.Empty;
+        return true;
     }
-
-    private static IEnumerable<double> ExtractNumbers(string text) =>
-        NumberPattern().Matches(text)
-            .Select(m => double.Parse(m.Value.Replace(',', '.'), CultureInfo.InvariantCulture));
-
-    // Digits not glued to a letter, so ids like M10 or T1 are not treated as numbers.
-    [GeneratedRegex(@"(?<![\p{L}\d.,])\d+(?:[.,]\d+)?")]
-    private static partial Regex NumberPattern();
-
-    // Latin or Cyrillic M followed by a measure number: M7, m7, М7.
-    [GeneratedRegex(@"(?<![\p{L}\d])[MmМм](\d{1,2})(?!\d)")]
-    private static partial Regex MeasureIdPattern();
 }
