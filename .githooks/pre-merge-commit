@@ -1,6 +1,9 @@
 #!/bin/sh
 repo_root=$(git rev-parse --show-toplevel) || exit 1
-if command -v python3 >/dev/null 2>&1; then
+if command -v python3 >/dev/null 2>&1 && python3 --version >/dev/null 2>&1; then
   exec python3 "$repo_root/.githooks/check-personal-authorship.py" pre-commit "$@"
 fi
-exec python "$repo_root/.githooks/check-personal-authorship.py" pre-commit "$@"
+if command -v python >/dev/null 2>&1 && python --version >/dev/null 2>&1; then
+  exec python "$repo_root/.githooks/check-personal-authorship.py" pre-commit "$@"
+fi
+exec py -3 "$repo_root/.githooks/check-personal-authorship.py" pre-commit "$@"

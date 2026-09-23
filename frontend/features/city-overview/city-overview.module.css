@@ -277,6 +277,10 @@
   stroke: var(--color-accent-soft);
 }
 
+.platePillShort {
+  display: none;
+}
+
 .platePillBox {
   fill: var(--color-surface);
   stroke: var(--color-danger);
@@ -311,7 +315,7 @@
   }
 
   .plateName {
-    font-size: 29px;
+    font-size: 25px;
     transform: translateX(-18px);
   }
 
@@ -323,8 +327,13 @@
     transform: translateY(-12px);
   }
 
-  /* Метка масштабируется целиком, чтобы текст не вышел за рамку */
+  /* На узком экране — короткая метка «▼ N», масштабируется целиком вместе с рамкой */
   .platePill {
+    display: none;
+  }
+
+  .platePillShort {
+    display: inline;
     transform-box: fill-box;
     transform-origin: 0 0;
     transform: translateY(-10px) scale(1.4);

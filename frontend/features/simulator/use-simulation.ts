@@ -1,17 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import { ApiClientError, evaluateChoices, getScenario } from "@/lib/api/client";
+import { evaluateChoices, getScenario } from "@/lib/api/client";
 import { buildEvaluatePayload } from "@/lib/api/payload";
 import type { ChoiceDraft, ScenarioVM, ValidateDraft } from "@/lib/contracts/ui";
 import { useLocale } from "@/lib/i18n";
 import { initialSimulatorState, simulatorReducer } from "./simulator-reducer";
-
-function apiMessage(error: unknown): string {
-  if (error instanceof ApiClientError && error.kind === "aborted") return "";
-  if (error instanceof Error) return error.message;
-  return "Не удалось выполнить запрос к серверу.";
-}
+import { simulationError } from "./error-messages";
 
 const DRAFT_STORAGE_KEY = "akim-draft-v1";
 const DRAFT_STORAGE_VERSION = 1;
@@ -59,7 +54,7 @@ export function useSimulation(validateDraft: ValidateDraft) {
     scenarioController.current = controller;
     dispatch({ type: "scenario-loading" });
     try { dispatch({ type: "scenario-ready", scenario: await getScenario(controller.signal) }); }
-    catch (error) { if (!controller.signal.aborted) dispatch({ type: "scenario-error", message: apiMessage(error) }); }
+    catch (error) { if (!controller.signal.aborted) dispatch({ type: "scenario-error", error: simulationError(error) }); }
   }, []);
 
   useEffect(() => { void loadScenario(); return () => { scenarioController.current?.abort(); evaluationController.current?.abort(); }; }, [loadScenario]);
@@ -97,7 +92,7 @@ export function useSimulation(validateDraft: ValidateDraft) {
     evaluationController.current = controller;
     dispatch({ type: "evaluate-start", requestId: id, submittedChoices });
     try { dispatch({ type: "evaluate-success", requestId: id, revision, result: await evaluateChoices(buildEvaluatePayload(state.scenario.scenario, submittedChoices), controller.signal, intlLocale) }); }
-    catch (error) { if (!controller.signal.aborted) dispatch({ type: "evaluate-error", requestId: id, revision, message: apiMessage(error) }); }
+    catch (error) { if (!controller.signal.aborted) dispatch({ type: "evaluate-error", requestId: id, revision, error: simulationError(error) }); }
     finally { evaluationInFlight.current = false; }
   }, [state, validateDraft, intlLocale]);
 

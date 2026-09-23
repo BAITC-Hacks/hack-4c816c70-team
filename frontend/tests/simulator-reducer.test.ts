@@ -41,7 +41,7 @@ test("ошибка оценки сохраняет выбор и разреша�
   let state = simulatorReducer(initialSimulatorState, { type: "scenario-ready", scenario });
   state = simulatorReducer(state, { type: "set-choices", choices: [{ measureId: "M7", districtId: "nura" }] });
   state = simulatorReducer(state, { type: "evaluate-start", requestId: 8, submittedChoices: state.choices });
-  state = simulatorReducer(state, { type: "evaluate-error", requestId: 8, revision: state.revision, message: "Сервер недоступен" });
+  state = simulatorReducer(state, { type: "evaluate-error", requestId: 8, revision: state.revision, error: { kind: "network" } });
   assert.equal(state.evaluation.status, "error");
   assert.deepEqual(state.choices, [{ measureId: "M7", districtId: "nura" }]);
   const retry = simulatorReducer(state, { type: "evaluate-start", requestId: 9, submittedChoices: state.choices });

@@ -32,7 +32,7 @@ import {
 } from "three";
 import type { DistrictId } from "@/lib/contracts/ui";
 import { ATLAS_SLOTS, ATLAS_VIEWBOX, assignSlots, type AtlasSlot } from "./atlas-layout";
-import { createCityLandmarks, nearLandmark } from "./city-landmarks";
+import { createCityLandmarks, overlapsLandmark } from "./city-landmarks";
 
 export interface CitySceneOptions {
   readonly districtIds: readonly DistrictId[];
@@ -227,6 +227,9 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
   const pickables: Mesh[] = [];
   const roadMaterial = lambert(new Color("#829398"));
   const facadeMaterial = lambert(new Color("#6b939e"));
+  /** Полуширина улицы (ширина полосы 7) и шаг выборки при обрезке по объектам. */
+  const ROAD_HALF = 3.5;
+  const ROAD_STEP = 2;
   const roadLinesX = [96, 204, 380, 520];
   const roadLinesY = [96, 168, 300, 372];
   const nearRoad = (x: number, y: number) =>
@@ -252,10 +255,16 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
       const start = vertical ? minY : minX;
       const end = vertical ? maxY : maxX;
       let beginning: number | null = null;
-      for (let cursor = start; cursor <= end + 2; cursor += 2) {
+      for (let cursor = start; cursor <= end + ROAD_STEP; cursor += ROAD_STEP) {
         const x = vertical ? axis : cursor;
         const y = vertical ? cursor : axis;
-        const inside = cursor <= end && insidePolygon(x, y, polygon) && !nearLandmark(x, y, -5);
+        // Полная ширина улицы и шаг выборки: отрезок заканчивается до основания, а не под ним.
+        const inside =
+          cursor <= end &&
+          insidePolygon(x, y, polygon) &&
+          !(vertical
+            ? overlapsLandmark(x, y, ROAD_HALF, ROAD_STEP, 2)
+            : overlapsLandmark(x, y, ROAD_STEP, ROAD_HALF, 2));
         if (inside && beginning === null) beginning = cursor;
         if (!inside && beginning !== null) {
           const length = cursor - beginning;
@@ -294,8 +303,9 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
           [jx - half, jy - half], [jx + half, jy - half], [jx - half, jy + half], [jx + half, jy + half],
         ];
         if (!corners.every(([cx, cy]) => insidePolygon(cx, cy, polygon))) continue;
-        if (nearLandmark(jx, jy, half * 0.7) || nearRoad(jx, jy)) continue;
-        const nearPark = Math.hypot(jx - parkX, jy - parkY) < parkRadius + 6 && !nearLandmark(parkX, parkY, parkRadius);
+        // Габарит здания не больше half по обеим осям (size ≤ 0,95·2·half, depth ≤ 1,05·size).
+        if (overlapsLandmark(jx, jy, half) || nearRoad(jx, jy)) continue;
+        const nearPark = Math.hypot(jx - parkX, jy - parkY) < parkRadius + 6 && !overlapsLandmark(parkX, parkY, parkRadius);
         if (nearPark) {
           if (random() > 0.35) trees.push([jx, jy]);
           continue;
@@ -337,7 +347,7 @@ export function createCityScene(host: HTMLElement, options: CitySceneOptions): C
 
     const park = new Mesh(track(new CylinderGeometry(parkRadius / SCALE, parkRadius / SCALE, 0.05, 28)), parkMaterial);
     park.position.set(toWorldX(parkX), 0.245, toWorldZ(parkY));
-    if (insidePolygon(parkX, parkY, polygon) && !nearLandmark(parkX, parkY, parkRadius)) city.add(park);
+    if (insidePolygon(parkX, parkY, polygon) && !overlapsLandmark(parkX, parkY, parkRadius)) city.add(park);
 
     if (trees.length) {
       const forest = new InstancedMesh(treeGeometry, treeMaterial, trees.length);

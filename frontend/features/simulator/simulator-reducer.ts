@@ -1,13 +1,14 @@
 import type { ChoiceDraft, EvaluationVM, ScenarioVM } from "@/lib/contracts/ui";
+import type { SimulationError } from "./error-messages";
 
 export type ScenarioState =
   | { readonly status: "loading" }
   | { readonly status: "ready"; readonly scenario: ScenarioVM }
-  | { readonly status: "error"; readonly message: string };
+  | { readonly status: "error"; readonly error: SimulationError };
 export type EvaluationState =
   | { readonly status: "idle" }
   | { readonly status: "pending"; readonly requestId: number; readonly revision: number; readonly submittedChoices: readonly ChoiceDraft[] }
-  | { readonly status: "error"; readonly message: string }
+  | { readonly status: "error"; readonly error: SimulationError }
   | { readonly status: "success"; readonly requestId: number; readonly result: EvaluationVM; readonly submittedChoices: readonly ChoiceDraft[]; readonly revision: number };
 
 export interface SimulatorState {
@@ -25,19 +26,19 @@ export const initialSimulatorState: SimulatorState = {
 export type SimulatorAction =
   | { type: "scenario-loading" }
   | { type: "scenario-ready"; scenario: ScenarioVM }
-  | { type: "scenario-error"; message: string }
+  | { type: "scenario-error"; error: SimulationError }
   | { type: "select-district"; districtId: string }
   | { type: "set-choices"; choices: readonly ChoiceDraft[] }
   | { type: "evaluate-start"; requestId: number; submittedChoices: readonly ChoiceDraft[] }
   | { type: "evaluate-success"; requestId: number; revision: number; result: EvaluationVM }
-  | { type: "evaluate-error"; requestId: number; revision: number; message: string }
+  | { type: "evaluate-error"; requestId: number; revision: number; error: SimulationError }
   | { type: "reset" };
 
 export function simulatorReducer(state: SimulatorState, action: SimulatorAction): SimulatorState {
   switch (action.type) {
     case "scenario-loading": return { ...state, scenario: { status: "loading" } };
     case "scenario-ready": return { ...state, scenario: { status: "ready", scenario: action.scenario }, selectedDistrictId: action.scenario.districts[0]?.id ?? null };
-    case "scenario-error": return { ...state, scenario: { status: "error", message: action.message } };
+    case "scenario-error": return { ...state, scenario: { status: "error", error: action.error } };
     case "select-district": return { ...state, selectedDistrictId: action.districtId };
     case "set-choices":
       if (state.evaluation.status === "pending") return state;
@@ -50,7 +51,7 @@ export function simulatorReducer(state: SimulatorState, action: SimulatorAction)
       return { ...state, evaluation: { status: "success", requestId: action.requestId, result: action.result, submittedChoices: state.evaluation.submittedChoices, revision: action.revision } };
     case "evaluate-error":
       if (state.evaluation.status !== "pending" || state.evaluation.requestId !== action.requestId || state.revision !== action.revision) return state;
-      return { ...state, evaluation: { status: "error", message: action.message } };
+      return { ...state, evaluation: { status: "error", error: action.error } };
     case "reset": return { ...initialSimulatorState, scenario: state.scenario.status === "ready" ? state.scenario : initialSimulatorState.scenario, selectedDistrictId: state.scenario.status === "ready" ? state.scenario.scenario.districts[0]?.id ?? null : null, revision: state.revision + 1 };
     default: return state;
   }

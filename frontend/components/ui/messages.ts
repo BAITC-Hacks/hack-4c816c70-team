@@ -18,12 +18,12 @@ export const uiMessages: Readonly<Record<Locale, UiMessages>> = {
   kk: {
     navLabel: "Бөлімдер",
     themeLegend: "Безендіру тақырыбы",
-    themes: { system: "Жүйелік", light: "Күндіз", dark: "Түнгі", paper: "Қағаз" },
+    themes: { system: "Жүйелік", light: "Күндізгі", dark: "Түнгі", paper: "Қағаз" },
     languageLabel: "Интерфейс тілі",
   },
   en: {
     navLabel: "Sections",
-    themeLegend: "Colour theme",
+    themeLegend: "Color theme",
     themes: { system: "System", light: "Day", dark: "Night", paper: "Paper" },
     languageLabel: "Interface language",
   },

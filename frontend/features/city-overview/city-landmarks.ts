@@ -11,17 +11,39 @@ import {
 } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
+/**
+ * radius — прежняя зона тишины вокруг объекта (парки, декор).
+ * footprint — реальное основание в единицах схемы (1 мировая = 20): круг радиуса
+ * extent или квадрат с полустороной extent, выровненный по осям. Размеры взяты
+ * из геометрии ниже: disc/block оснований, павильоны EXPO, подиумы пирамиды и мечети.
+ */
 export const LANDMARK_SITES = [
-  { id: "khan-shatyr", x: 136, y: 320, radius: 48 },
-  { id: "baiterek", x: 292, y: 300, radius: 30 },
-  { id: "nur-alem", x: 432, y: 349, radius: 49 },
-  { id: "peace-palace", x: 485, y: 105, radius: 35 },
-  { id: "grand-mosque", x: 123, y: 109, radius: 55 },
-  { id: "otan-qorgaushylar", x: 291, y: 111, radius: 41 },
+  { id: "khan-shatyr", x: 136, y: 320, radius: 48, shape: "circle", extent: 43 },
+  { id: "baiterek", x: 292, y: 300, radius: 30, shape: "circle", extent: 21 },
+  { id: "nur-alem", x: 432, y: 349, radius: 49, shape: "circle", extent: 48 },
+  { id: "peace-palace", x: 485, y: 105, radius: 35, shape: "square", extent: 31 },
+  { id: "grand-mosque", x: 123, y: 109, radius: 55, shape: "square", extent: 46 },
+  { id: "otan-qorgaushylar", x: 291, y: 111, radius: 41, shape: "circle", extent: 39 },
 ] as const;
 
 export function nearLandmark(x: number, y: number, padding = 0): boolean {
   return LANDMARK_SITES.some((site) => Math.hypot(x - site.x, y - site.y) < site.radius + padding);
+}
+
+/**
+ * Пересекает ли прямоугольник [x ± halfX, y ± halfY] основание любой
+ * достопримечательности с зазором margin. Учитывает квадратные подиумы целиком,
+ * включая углы, и полную ширину дорог и зданий, а не только их центр.
+ */
+export function overlapsLandmark(x: number, y: number, halfX: number, halfY = halfX, margin = 3): boolean {
+  return LANDMARK_SITES.some((site) => {
+    const dx = Math.abs(x - site.x);
+    const dy = Math.abs(y - site.y);
+    if (site.shape === "square") {
+      return dx < site.extent + halfX + margin && dy < site.extent + halfY + margin;
+    }
+    return Math.hypot(Math.max(0, dx - halfX), Math.max(0, dy - halfY)) < site.extent + margin;
+  });
 }
 
 const world = (x: number, y: number, elevation = 0.26) => new Vector3((x - 300) / 20, elevation, (y - 210) / 20);

@@ -171,23 +171,43 @@ export function DistrictAtlas({
                   />
                 </g>
                 {criticalCount > 0 ? (
-                  <g className={styles.platePill}>
-                    <rect
-                      x={x}
-                      y={y + PROFILE.top + PROFILE.height + 8}
-                      width={pillText.length * 7.4 + 18}
-                      height={24}
-                      rx={12}
-                      className={styles.platePillBox}
-                    />
-                    <text
-                      x={x + 9}
-                      y={y + PROFILE.top + PROFILE.height + 25}
-                      className={styles.platePillText}
-                    >
-                      {pillText}
-                    </text>
-                  </g>
+                  <>
+                    {/* Полная метка на широком экране, короткая «▼ N» на узком; полный текст — в aria-label и карточке */}
+                    <g className={styles.platePill}>
+                      <rect
+                        x={x}
+                        y={y + PROFILE.top + PROFILE.height + 8}
+                        width={pillText.length * 7.4 + 18}
+                        height={24}
+                        rx={12}
+                        className={styles.platePillBox}
+                      />
+                      <text
+                        x={x + 9}
+                        y={y + PROFILE.top + PROFILE.height + 25}
+                        className={styles.platePillText}
+                      >
+                        {pillText}
+                      </text>
+                    </g>
+                    <g className={styles.platePillShort}>
+                      <rect
+                        x={x}
+                        y={y + PROFILE.top + PROFILE.height + 8}
+                        width={`▼ ${criticalCount}`.length * 7.4 + 18}
+                        height={24}
+                        rx={12}
+                        className={styles.platePillBox}
+                      />
+                      <text
+                        x={x + 9}
+                        y={y + PROFILE.top + PROFILE.height + 25}
+                        className={styles.platePillText}
+                      >
+                        {`▼ ${criticalCount}`}
+                      </text>
+                    </g>
+                  </>
                 ) : null}
               </g>
             </g>
