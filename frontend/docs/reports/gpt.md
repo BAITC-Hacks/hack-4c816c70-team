@@ -27,7 +27,7 @@ GPT-интегратор. Основной commit: `a6afa83 feat(frontend): inte
 - `npm run typecheck` — успешно.
 - `npm test` — 32/32: payload городской меры, envelope API error, stale response/reset и весь набор проверок `validateDraft` Planner.
 - `npm run build` — успешно (Next 16.3.6, маршрут `/`).
-- Browser на `http://localhost:3000`: корректно отрисовано состояние ошибки загрузки и кнопка retry; console/runtime errors не зафиксированы.
+- Browser на `http://localhost:3000`: корректно отрисовано состояние ошибки загрузки и кнопка retry.
 
 ## Скриншоты/шаги воспроизведения
 
@@ -44,6 +44,7 @@ GPT-интегратор. Основной commit: `a6afa83 feat(frontend): inte
 - Владельцу сервера: предоставить работающий C# API/контейнер на `http://localhost:8080` (Swagger `/swagger/v1/swagger.json`) для реального browser прогона.
 - Claude 1 передал только промежуточный отчёт; финальный отчёт Claude 2 пока отсутствует. Их незакоммиченные модули не включены в integration commit до подтверждения владельцев.
 - `next dev` автоматически изменил `frontend/AGENTS.md`; этот файл принадлежит архитектору и сознательно не добавлен в commit.
+- Push в `origin/main` отклонён: удалённая ветка ушла вперёд. Pull/rebase не запускался из-за незавершённых файлов Claude в общем каталоге.
 
 ## Изменения публичного контракта
 
