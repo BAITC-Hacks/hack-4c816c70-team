@@ -1,5 +1,7 @@
 # Third-party components
 
+Версии JavaScript-пакетов зафиксированы в `frontend/package-lock.json`, NuGet-пакетов — в `backend/CitySimulator.Api/CitySimulator.Api.csproj`. Frontend использует standalone-сборку Next.js. Ключи и внешний LLM для режима `mock` не требуются.
+
 | Component | License | Purpose | Link |
 | --- | --- | --- | --- |
 | .NET 8 and ASP.NET Core | MIT | C# API runtime | https://github.com/dotnet/aspnetcore |
